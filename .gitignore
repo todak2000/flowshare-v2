@@ -1,0 +1,8 @@
+*.md
+credentials.json
+Back Allocation Methodology and Formulas.pdf
+backend/note.txt
+backend/venv
+backend/.env
+frontend/.next
+frontend/node_modules

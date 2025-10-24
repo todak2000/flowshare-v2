@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # Main API Service
+  api:
+    build:
+      context: ./backend
+      dockerfile: ./api/Dockerfile
+    container_name: flowshare-api
+    ports:
+      - "8000:8000"
+    environment:
+      - GCP_PROJECT_ID=flowshare-v2
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - ENVIRONMENT=development
+      - DEBUG=true
+    volumes:
+      - ./backend/shared:/app/shared
+      - ./backend/api:/app/api
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - flowshare-network
+
+  # Auditor Agent
+  auditor:
+    build:
+      context: ./backend
+      dockerfile: ./agents/auditor/Dockerfile
+    container_name: flowshare-auditor
+    environment:
+      - GCP_PROJECT_ID=flowshare-v2
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend/shared:/app/shared
+      - ./backend/agents/auditor:/app/agent
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - flowshare-network
+
+  # Accountant Agent
+  accountant:
+    build:
+      context: ./backend
+      dockerfile: ./agents/accountant/Dockerfile
+    container_name: flowshare-accountant
+    environment:
+      - GCP_PROJECT_ID=flowshare-v2
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend/shared:/app/shared
+      - ./backend/agents/accountant:/app/agent
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - flowshare-network
+
+  # Communicator Agent
+  communicator:
+    build:
+      context: ./backend
+      dockerfile: ./agents/communicator/Dockerfile
+    container_name: flowshare-communicator
+    environment:
+      - GCP_PROJECT_ID=flowshare-v2
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend/shared:/app/shared
+      - ./backend/agents/communicator:/app/agent
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - flowshare-network
+
+  # Firebase Emulator (Firestore)
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: flowshare-firestore
+    ports:
+      - "8080:8080"
+      - "4000:4000"
+    command: >
+      gcloud emulators firestore start
+      --host-port=0.0.0.0:8080
+    networks:
+      - flowshare-network
+
+  # Pub/Sub Emulator
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: flowshare-pubsub
+    ports:
+      - "8085:8085"
+    command: >
+      gcloud emulators pubsub start
+      --host-port=0.0.0.0:8085
+    networks:
+      - flowshare-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flowshare-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=flowshare-v2
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    networks:
+      - flowshare-network
+
+networks:
+  flowshare-network:
+    driver: bridge
