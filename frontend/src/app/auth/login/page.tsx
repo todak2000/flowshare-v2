@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { apiClient } from '@/lib/api-client';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,23 +25,40 @@ export default function LoginPage() {
 
     try {
       // Sign in with Firebase
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Wait a moment for Firebase to fully authenticate
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Get the ID token directly from the user credential
+      const idToken = await userCredential.user.getIdToken();
+      console.log('User logged in, token obtained');
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
       // Verify user exists in backend (and sync if needed)
       try {
-        await apiClient.get('/api/auth/me');
+        await axios.get(`${API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
       } catch (apiError: any) {
         // If user doesn't exist in backend, try to register them
         if (apiError.response?.status === 404) {
-          await apiClient.post('/api/auth/register');
+          await axios.post(
+            `${API_URL}/api/auth/register`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${idToken}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
         } else {
           throw apiError;
         }
       }
 
+      console.log('User verified in backend');
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);

@@ -14,6 +14,7 @@ from shared.email import (
     send_email,
     render_anomaly_alert_email,
     render_reconciliation_complete_email,
+    render_invitation_email
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -76,6 +77,60 @@ async def handle_entry_flagged(entry_id: str, tenant_id: str, user_id: str, anom
     except Exception as e:
         logger.error(f"Error handling entry flagged event: {str(e)}")
 
+
+async def handle_invitation_created(
+    invitation_id: str,
+    tenant_id: str,
+    email: str,
+    partner_name: str,
+    invited_by_user_id: str,
+    role: str,
+    expires_at: str,
+):
+    try:
+        db = get_firestore()
+
+        # Get tenant name
+        tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
+        tenant_name = tenant_doc.to_dict().get("name", "a joint venture") if tenant_doc.exists else "a joint venture"
+
+        # Get inviter details
+        users_ref = db.collection(FirestoreCollections.USERS)
+        inviter_query = await users_ref.where("firebase_uid", "==", invited_by_user_id).limit(1).get()
+        inviter_name = "A colleague"
+        if inviter_query:
+            inviter_data = inviter_query[0].to_dict()
+            inviter_name = inviter_data.get("full_name") or inviter_data.get("email") or "A colleague"
+
+        # Format expiration date for email (e.g., "October 25, 2025 at 3:30 PM UTC")
+        from datetime import datetime, timezone
+        try:
+            expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            formatted_expires = expires_dt.strftime("%B %d, %Y at %I:%M %p UTC")
+        except:
+            formatted_expires = expires_at  # fallback
+
+        # Render email
+        html_body = render_invitation_email(
+            invitee_name=partner_name,
+            inviter_name=inviter_name,
+            tenant_name=tenant_name,
+            role=role,
+            invitation_id=invitation_id,
+            expires_at=formatted_expires,
+        )
+
+        await send_email(
+            to_email=email,
+            to_name=partner_name,
+            subject="You're invited to join FlowShare V2!",
+            html_body=html_body,
+        )
+        logger.info(f"Invitation email sent to {email} for invitation {invitation_id}")
+
+    except Exception as e:
+        logger.error(f"Error in handle_invitation_created: {str(e)}")
+        raise
 
 async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str):
     """
@@ -155,6 +210,8 @@ async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str)
 
 def callback(message: pubsub_v1.subscriber.message.Message):
     """Callback for Pub/Sub messages."""
+    logger.info("✅ Received raw Pub/Sub message")
+    logger.info(f"Raw data: {message.data}")
     try:
         data = json.loads(message.data.decode("utf-8"))
         event_type = data.get("event_type")
@@ -180,6 +237,18 @@ def callback(message: pubsub_v1.subscriber.message.Message):
                     tenant_id=data.get("tenant_id"),
                 )
             )
+        elif event_type == "invitation_created":
+            loop.run_until_complete(
+                handle_invitation_created(
+                    invitation_id=data["invitation_id"],
+                    tenant_id=data["tenant_id"],
+                    email=data["email"],
+                    partner_name=data["partner_name"],
+                    invited_by_user_id=data["invited_by_user_id"],
+                    role=data["role"],
+                    expires_at=data["expires_at"],
+                )
+            )
         else:
             logger.warning(f"Unknown event type: {event_type}")
 
@@ -201,6 +270,7 @@ def main():
     topics = [
         settings.pubsub_entry_flagged_topic,
         settings.pubsub_reconciliation_complete_topic,
+        settings.pubsub_invitation_created_topic
     ]
 
     futures_list = []

@@ -9,12 +9,12 @@ services:
     container_name: flowshare-api
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
-      - GCP_PROJECT_ID=flowshare-v2
+      # Override emulator hosts for Docker networking
       - FIRESTORE_EMULATOR_HOST=firestore:8080
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - ENVIRONMENT=development
-      - DEBUG=true
     volumes:
       - ./backend/shared:/app/shared
       - ./backend/api:/app/api
@@ -30,11 +30,11 @@ services:
       context: ./backend
       dockerfile: ./agents/auditor/Dockerfile
     container_name: flowshare-auditor
+    env_file:
+      - ./backend/.env
     environment:
-      - GCP_PROJECT_ID=flowshare-v2
       - FIRESTORE_EMULATOR_HOST=firestore:8080
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - ENVIRONMENT=development
     volumes:
       - ./backend/shared:/app/shared
       - ./backend/agents/auditor:/app/agent
@@ -50,11 +50,11 @@ services:
       context: ./backend
       dockerfile: ./agents/accountant/Dockerfile
     container_name: flowshare-accountant
+    env_file:
+      - ./backend/.env
     environment:
-      - GCP_PROJECT_ID=flowshare-v2
       - FIRESTORE_EMULATOR_HOST=firestore:8080
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - ENVIRONMENT=development
     volumes:
       - ./backend/shared:/app/shared
       - ./backend/agents/accountant:/app/agent
@@ -70,11 +70,11 @@ services:
       context: ./backend
       dockerfile: ./agents/communicator/Dockerfile
     container_name: flowshare-communicator
+    env_file:
+      - ./backend/.env
     environment:
-      - GCP_PROJECT_ID=flowshare-v2
       - FIRESTORE_EMULATOR_HOST=firestore:8080
       - PUBSUB_EMULATOR_HOST=pubsub:8085
-      - ENVIRONMENT=development
     volumes:
       - ./backend/shared:/app/shared
       - ./backend/agents/communicator:/app/agent

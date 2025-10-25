@@ -6,3 +6,5 @@ backend/venv
 backend/.env
 frontend/.next
 frontend/node_modules
+backend/test_pubsub.py
+backend/*.sh

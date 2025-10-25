@@ -1,6 +1,6 @@
 """Tenant management routes."""
 from fastapi import APIRouter, HTTPException, Depends, Body
-from datetime import datetime
+from datetime import datetime, timezone
 import sys
 import uuid
 
@@ -14,6 +14,76 @@ from typing import List
 router = APIRouter()
 
 
+@router.get("/me", response_model=Tenant)
+async def get_my_tenant(
+    user_id: str = Depends(get_current_user_id),
+):
+    """Get the current user's primary tenant."""
+    db = get_firestore()
+
+    # Get user's tenant_ids
+    users_ref = db.collection(FirestoreCollections.USERS)
+    user_query = await users_ref.where("firebase_uid", "==", user_id).limit(1).get()
+
+    if not user_query:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_data = user_query[0].to_dict()
+    tenant_ids = user_data.get("tenant_ids", [])
+
+    if not tenant_ids:
+        raise HTTPException(status_code=404, detail="User has no tenant")
+
+    # Get the first (primary) tenant
+    tenant_id = tenant_ids[0]
+    tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
+
+    if not tenant_doc.exists:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    return Tenant(id=tenant_doc.id, **tenant_doc.to_dict())
+
+
+@router.patch("/me", response_model=Tenant)
+async def update_my_tenant(
+    tenant_update: TenantUpdate,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Update the current user's primary tenant."""
+    db = get_firestore()
+
+    # Get user's tenant_ids
+    users_ref = db.collection(FirestoreCollections.USERS)
+    user_query = await users_ref.where("firebase_uid", "==", user_id).limit(1).get()
+
+    if not user_query:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_data = user_query[0].to_dict()
+    tenant_ids = user_data.get("tenant_ids", [])
+
+    if not tenant_ids:
+        raise HTTPException(status_code=404, detail="User has no tenant")
+
+    # Update the first (primary) tenant
+    tenant_id = tenant_ids[0]
+    tenant_ref = db.collection(FirestoreCollections.TENANTS).document(tenant_id)
+    tenant_doc = await tenant_ref.get()
+
+    if not tenant_doc.exists:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Update only provided fields
+    update_data = tenant_update.model_dump(exclude_unset=True)
+    update_data["updated_at"] = datetime.now(timezone.utc)
+
+    await tenant_ref.update(update_data)
+
+    # Fetch updated tenant
+    updated_doc = await tenant_ref.get()
+    return Tenant(id=updated_doc.id, **updated_doc.to_dict())
+
+
 @router.post("", response_model=Tenant, status_code=201)
 async def create_tenant(
     tenant_data: TenantCreate,
@@ -22,7 +92,7 @@ async def create_tenant(
     """Create a new tenant."""
     db = get_firestore()
     tenant_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     tenant_doc = {
         **tenant_data.model_dump(),
@@ -110,7 +180,7 @@ async def update_tenant(
 
     # Update only provided fields
     update_data = tenant_update.model_dump(exclude_unset=True)
-    update_data["updated_at"] = datetime.utcnow()
+    update_data["updated_at"] = datetime.now(timezone.utc)
 
     await tenant_ref.update(update_data)
 
@@ -151,7 +221,7 @@ async def update_tenant_settings(
 
     await tenant_ref.update({
         "settings": settings.model_dump(),
-        "updated_at": datetime.utcnow(),
+        "updated_at": datetime.now(timezone.utc),
     })
 
     return settings

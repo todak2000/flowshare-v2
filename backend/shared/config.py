@@ -1,6 +1,8 @@
 """Application configuration using Pydantic Settings."""
 from pydantic_settings import BaseSettings
 from typing import List
+import os
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -22,6 +24,7 @@ class Settings(BaseSettings):
     pubsub_entry_flagged_topic: str = "entry-flagged"
     pubsub_reconciliation_trigger_topic: str = "reconciliation-triggered"
     pubsub_reconciliation_complete_topic: str = "reconciliation-complete"
+    pubsub_invitation_created_topic: str = "invitation-created"
 
     # BigQuery
     bq_dataset: str = "flowshare_analytics"
@@ -58,7 +61,8 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     class Config:
-        env_file = ".env"
+        # Look for .env file in the backend directory (parent of shared)
+        env_file = str(Path(__file__).parent.parent / ".env")
         case_sensitive = False
 
 

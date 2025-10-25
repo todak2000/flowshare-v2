@@ -16,9 +16,28 @@ class AllocationModel(str, Enum):
 class SubscriptionPlan(str, Enum):
     """Subscription tiers."""
 
-    FREE = "free"
-    STANDARD = "standard"
+    STARTER = "starter"
+    PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
+
+# Plan limits
+PLAN_LIMITS = {
+    SubscriptionPlan.STARTER: {
+        "max_partners": 5,
+        "max_entries_per_month": 100,
+        "price": 499
+    },
+    SubscriptionPlan.PROFESSIONAL: {
+        "max_partners": 20,
+        "max_entries_per_month": 500,
+        "price": 999
+    },
+    SubscriptionPlan.ENTERPRISE: {
+        "max_partners": -1,  # Unlimited
+        "max_entries_per_month": -1,  # Unlimited
+        "price": None  # Custom pricing
+    }
+}
 
 
 class TenantSettings(BaseModel):
@@ -33,7 +52,7 @@ class TenantBase(BaseModel):
     """Base tenant fields."""
 
     name: str
-    subscription_plan: SubscriptionPlan = SubscriptionPlan.STANDARD
+    subscription_plan: SubscriptionPlan = SubscriptionPlan.STARTER
 
 
 class TenantCreate(TenantBase):

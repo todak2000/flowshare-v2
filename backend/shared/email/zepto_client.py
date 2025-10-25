@@ -70,7 +70,7 @@ async def send_email(
                 timeout=30.0,
             )
 
-            if response.status_code == 200:
+            if response.status_code == 201:
                 logger.info(f"Email sent successfully to {to_email}")
                 return True
             else:

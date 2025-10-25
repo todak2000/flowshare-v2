@@ -438,3 +438,70 @@ def render_invitation_email(
     """
 
     return _wrap_in_layout(body)
+
+def render_invitation_email(
+    invitee_name: str,
+    inviter_name: str,
+    tenant_name: str,
+    role: str,
+    invitation_id: str,
+    expires_at: str,
+) -> str:
+    """
+    Render team invitation email (without header/footer).
+
+    Args:
+        invitee_name: Invitee's name
+        inviter_name: Inviter's name
+        tenant_name: Tenant/company name
+        role: User role being assigned
+        invitation_id: Invitation ID
+        expires_at: Invitation expiration date (ISO string or formatted)
+
+    Returns:
+        Complete HTML email wrapped in layout
+    """
+    role_display = role.replace('_', ' ').title()
+
+    body = f"""
+        <h1>🤝 You've Been Invited to FlowShare V2</h1>
+
+        <p>Hello <strong>{invitee_name}</strong>,</p>
+
+        <p><strong>{inviter_name}</strong> has invited you to join <strong>{tenant_name}</strong> on FlowShare V2 as a <strong>{role_display}</strong>.</p>
+
+        <div class="success-box">
+            <strong>Invitation Details</strong><br>
+            Organization: {tenant_name}<br>
+            Role: {role_display}<br>
+            Invited by: {inviter_name}
+        </div>
+
+        <h2>About FlowShare V2</h2>
+        <p>FlowShare V2 is an AI-powered hydrocarbon allocation platform that automates joint venture reconciliation, reducing the process from weeks to minutes while maintaining production-grade accuracy.</p>
+
+        <h2>Your Role: {role_display}</h2>
+        <p>As a {role_display}, you will be able to:</p>
+        <ul>
+            <li>Submit and manage production data</li>
+            <li>View reconciliation results</li>
+            <li>Access analytics and reports</li>
+            <li>Collaborate with team members</li>
+        </ul>
+
+        <a href="https://flowshare-v2.web.app/invitations/{invitation_id}/accept" class="button">
+            Accept Invitation
+        </a>
+
+        <p style="margin-top: 30px; font-size: 14px; color: #dc2626;">
+            <strong>⏰ This invitation expires on {expires_at}</strong>
+        </p>
+
+        <div class="divider"></div>
+
+        <p style="font-size: 14px; color: #6b7280;">
+            If you did not expect this invitation or have questions, please contact {inviter_name} or our support team.
+        </p>
+    """
+
+    return _wrap_in_layout(body)

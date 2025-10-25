@@ -12,12 +12,14 @@ from shared.config import settings
 from shared.database import initialize_firestore
 from routers import (
     auth,
+    users,
     tenants,
     invitations,
     production,
     reconciliation,
     analytics,
     forecasts,
+    partners
 )
 
 # Configure logging
@@ -80,12 +82,14 @@ async def health_check():
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(tenants.router, prefix="/api/tenants", tags=["Tenants"])
 app.include_router(invitations.router, prefix="/api/invitations", tags=["Invitations"])
 app.include_router(production.router, prefix="/api/production", tags=["Production"])
 app.include_router(reconciliation.router, prefix="/api/reconciliation", tags=["Reconciliation"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
+app.include_router(partners.router, prefix="/api/partners", tags=["Partners"])
 
 
 if __name__ == "__main__":

@@ -1,25 +1,32 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { auth } from './firebase';
+// lib/api-client.ts (or your current file path)
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from "axios";
+import { auth } from "./firebase";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const TOKEN_KEY = "flowshare-user-token";
+const TOKEN_EXPIRES_AT_KEY = "flowshare-user-token-expires-at";
 
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private refreshSubscribers: ((token: string) => void)[] = [];
 
   constructor() {
     this.client = axios.create({
       baseURL: API_URL,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
-    // Request interceptor to add auth token
     this.client.interceptors.request.use(
       async (config) => {
-        const user = auth.currentUser;
-        if (user) {
-          const token = await user.getIdToken();
+        const token = await this.getValidToken();
+        if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
@@ -27,21 +34,103 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          if (typeof window !== 'undefined') {
-            window.location.href = '/auth/login';
+      async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+          _retry?: boolean;
+        };
+
+        // Handle 401/403 due to expired/missing token
+        if (
+          (error.response?.status === 401 || error.response?.status === 403) &&
+          !originalRequest._retry
+        ) {
+          originalRequest._retry = true;
+
+          try {
+            const newToken = await this.refreshToken();
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return this.client(originalRequest);
+          } catch (refreshError) {
+            this.clearStoredToken();
+            if (typeof window !== "undefined") {
+              window.location.href = "/auth/login";
+            }
+            return Promise.reject(refreshError);
           }
         }
+
         return Promise.reject(error);
       }
     );
   }
 
+  private async getValidToken(): Promise<string | null> {
+    const storedToken = sessionStorage.getItem(TOKEN_KEY);
+    const expiresAtStr = sessionStorage.getItem(TOKEN_EXPIRES_AT_KEY);
+
+    if (storedToken && expiresAtStr) {
+      const expiresAt = parseInt(expiresAtStr, 10);
+      const now = Date.now();
+
+      // If token expires in more than 5 minutes, use it
+      if (expiresAt - now > 5 * 60 * 1000) {
+        return storedToken;
+      }
+    }
+
+    // Otherwise, refresh from Firebase
+    return await this.refreshToken();
+  }
+
+  private async refreshToken(): Promise<string> {
+    // Prevent multiple simultaneous refreshes
+    if (this.isRefreshing) {
+      return new Promise((resolve) => {
+        this.refreshSubscribers.push(resolve);
+      });
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        this.clearStoredToken();
+        throw new Error("No authenticated user");
+      }
+
+      // Force refresh to get a new token (important for security)
+      const token = await user.getIdToken(true); // `true` forces refresh
+      const decoded = await user.getIdTokenResult();
+      const expiresAt = decoded.expirationTime
+        ? new Date(decoded.expirationTime).getTime()
+        : Date.now() + 60 * 60 * 1000; // fallback: 1 hour
+
+      // Save to sessionStorage
+      sessionStorage.setItem(TOKEN_KEY, token);
+      sessionStorage.setItem(TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
+
+      this.isRefreshing = false;
+      this.refreshSubscribers.forEach((callback) => callback(token));
+      this.refreshSubscribers = [];
+
+      return token;
+    } catch (error) {
+      this.isRefreshing = false;
+      this.refreshSubscribers = [];
+      this.clearStoredToken();
+      throw error;
+    }
+  }
+
+  private clearStoredToken() {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+  }
+
+  // --- HTTP Methods ---
   async get<T>(url: string, params?: any): Promise<T> {
     const response = await this.client.get<T>(url, { params });
     return response.data;

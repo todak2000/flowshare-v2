@@ -96,3 +96,27 @@ async def publish_reconciliation_complete(reconciliation_id: str, tenant_id: str
             "event_type": "reconciliation_complete",
         },
     )
+
+async def publish_invitation_created(
+    invitation_id: str,
+    tenant_id: str,
+    email: str,
+    partner_name: str,
+    invited_by_user_id: str,
+    role: str,
+    expires_at: str,
+):
+    """Publish invitation created event for email delivery."""
+    await publish_message(
+        settings.pubsub_invitation_created_topic,
+        {
+            "event_type": "invitation_created",
+            "invitation_id": invitation_id,
+            "tenant_id": tenant_id,
+            "email": email,
+            "partner_name": partner_name,
+            "invited_by_user_id": invited_by_user_id,
+            "role": role,
+            "expires_at": expires_at,
+        },
+    )

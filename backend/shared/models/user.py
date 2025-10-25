@@ -26,6 +26,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: str
+    phone_number: Optional[str] = None
     role: UserRole = UserRole.PARTNER
     partner_id: Optional[str] = None
     notification_settings: NotificationSettings = Field(default_factory=NotificationSettings)
