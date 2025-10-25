@@ -10,9 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function LoginPage() {
   const router = useRouter();
+  const setUser = useAuthStore((state) => state.setUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,16 +36,22 @@ export default function LoginPage() {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
       // Verify user exists in backend (and sync if needed)
+      let userData;
       try {
-        await axios.get(`${API_URL}/api/auth/me`, {
+        console.log('Fetching user from backend...');
+        const response = await axios.get(`${API_URL}/api/auth/me`, {
           headers: {
             Authorization: `Bearer ${idToken}`,
           },
         });
+        userData = response.data;
+        console.log('User data from /api/auth/me:', userData);
       } catch (apiError: any) {
+        console.log('Error fetching user, status:', apiError.response?.status);
         // If user doesn't exist in backend, try to register them
         if (apiError.response?.status === 404) {
-          await axios.post(
+          console.log('User not found, needs registration');
+          const registerResponse = await axios.post(
             `${API_URL}/api/auth/register`,
             {},
             {
@@ -53,12 +61,21 @@ export default function LoginPage() {
               },
             }
           );
+          userData = registerResponse.data.user; // Register returns { user, tenant }
+          console.log('User registered, data:', userData);
         } else {
           throw apiError;
         }
       }
 
-      console.log('User verified in backend');
+      console.log('Setting user in Zustand store:', userData);
+
+      // Populate Zustand store with user data
+      if (userData) {
+        setUser(userData); // Backend response already matches our UserProfile interface
+        console.log('User stored in Zustand, tenant_ids:', userData.tenant_ids);
+      }
+
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
