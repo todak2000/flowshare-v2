@@ -32,6 +32,14 @@ export function ProductionFiltersComponent({
     setActivePreset(null)
   }
 
+  // Helper to format date in local timezone (YYYY-MM-DD)
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const setDatePreset = (preset: 'last_6_months' | 'last_year' | 'last_3_months' | 'current_month') => {
     const now = new Date()
     let startDate: Date
@@ -55,8 +63,8 @@ export function ProductionFiltersComponent({
 
     onFiltersChange({
       ...filters,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: formatLocalDate(startDate),
+      end_date: formatLocalDate(endDate),
     })
     setActivePreset(preset)
   }
@@ -69,8 +77,8 @@ export function ProductionFiltersComponent({
 
     onFiltersChange({
       ...filters,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: formatLocalDate(startDate),
+      end_date: formatLocalDate(endDate),
     })
     setActivePreset(`month_${monthOffset}`)
   }

@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,6 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-
 
 interface TenantSettings {
   allocation_model: string;
@@ -102,9 +100,9 @@ export default function SettingsPage() {
     try {
       setLoggingOut(true);
       await signOut(auth);
-      router.push('/auth/login');
+      router.push("/auth/login");
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
       setLoggingOut(false);
     }
   };
@@ -135,7 +133,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleInputChange = (field: keyof TenantSettings, value: string | number) => {
+  const handleInputChange = (
+    field: keyof TenantSettings,
+    value: string | number
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -163,7 +164,10 @@ export default function SettingsPage() {
     enterprise: "Enterprise",
   };
 
-  const planLimits: Record<string, { maxPartners: number; maxEntries: number; price: number | null }> = {
+  const planLimits: Record<
+    string,
+    { maxPartners: number; maxEntries: number; price: number | null }
+  > = {
     starter: { maxPartners: 5, maxEntries: 200, price: 499 },
     professional: { maxPartners: 20, maxEntries: 800, price: 999 },
     enterprise: { maxPartners: -1, maxEntries: -1, price: null },
@@ -185,44 +189,12 @@ export default function SettingsPage() {
     );
   }
 
-  const currentPlan = planLimits[tenant.subscription_plan] || planLimits.starter;
+  const currentPlan =
+    planLimits[tenant.subscription_plan] || planLimits.starter;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/20">
       {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-lg sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary to-violet-600 rounded-lg flex items-center justify-center">
-                <SettingsIcon className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">Settings</h1>
-                <p className="text-xs text-muted-foreground">
-                  Manage tenant and allocation settings
-                </p>
-              </div>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLogoutModalOpen(true)}
-            title="Logout"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
-      </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
@@ -235,7 +207,9 @@ export default function SettingsPage() {
                   <Building2 className="h-5 w-5 text-primary" />
                   <CardTitle>Organization Information</CardTitle>
                 </div>
-                <Badge variant={tenant.status === "active" ? "success" : "secondary"}>
+                <Badge
+                  variant={tenant.status === "active" ? "success" : "secondary"}
+                >
                   {tenant.status}
                 </Badge>
               </div>
@@ -245,11 +219,15 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-sm text-muted-foreground">Orgnaization Name</Label>
+                <Label className="text-sm text-muted-foreground">
+                  Orgnaization Name
+                </Label>
                 <p className="text-lg font-semibold mt-1">{tenant.name}</p>
               </div>
               <div>
-                <Label className="text-sm text-muted-foreground">Organization ID</Label>
+                <Label className="text-sm text-muted-foreground">
+                  Organization ID
+                </Label>
                 <p className="font-mono text-sm mt-1">{tenant.id}</p>
               </div>
             </CardContent>
@@ -262,9 +240,7 @@ export default function SettingsPage() {
                 <CreditCard className="h-5 w-5 text-primary" />
                 <CardTitle>Subscription Plan</CardTitle>
               </div>
-              <CardDescription>
-                Your current plan and limits
-              </CardDescription>
+              <CardDescription>Your current plan and limits</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
@@ -280,7 +256,9 @@ export default function SettingsPage() {
                       </p>
                     )}
                     {currentPlan.price === null && (
-                      <p className="text-sm text-muted-foreground">Custom Pricing</p>
+                      <p className="text-sm text-muted-foreground">
+                        Custom Pricing
+                      </p>
                     )}
                   </div>
                 </div>
@@ -291,9 +269,13 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Max Partners</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Max Partners
+                  </p>
                   <p className="text-2xl font-bold">
-                    {currentPlan.maxPartners === -1 ? "Unlimited" : currentPlan.maxPartners}
+                    {currentPlan.maxPartners === -1
+                      ? "Unlimited"
+                      : currentPlan.maxPartners}
                   </p>
                 </div>
                 <div className="p-4 border rounded-lg">
@@ -301,7 +283,9 @@ export default function SettingsPage() {
                     Max Entries/Month
                   </p>
                   <p className="text-2xl font-bold">
-                    {currentPlan.maxEntries === -1 ? "Unlimited" : currentPlan.maxEntries}
+                    {currentPlan.maxEntries === -1
+                      ? "Unlimited"
+                      : currentPlan.maxEntries}
                   </p>
                 </div>
               </div>
@@ -432,10 +416,7 @@ export default function SettingsPage() {
 
           {/* Save Button */}
           <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/dashboard")}
-            >
+            <Button variant="outline" onClick={() => router.push("/dashboard")}>
               Cancel
             </Button>
             <Button
@@ -456,7 +437,8 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
             <DialogDescription>
-              Are you sure you want to logout? You will need to sign in again to access your account.
+              Are you sure you want to logout? You will need to sign in again to
+              access your account.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -473,7 +455,7 @@ export default function SettingsPage() {
               disabled={loggingOut}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              {loggingOut ? 'Logging out...' : 'Logout'}
+              {loggingOut ? "Logging out..." : "Logout"}
             </Button>
           </DialogFooter>
         </DialogContent>

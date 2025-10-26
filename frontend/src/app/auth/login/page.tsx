@@ -105,7 +105,6 @@ export default function LoginPage() {
         }
       }
 
-      console.log("Setting user in Zustand store:", userData);
 
       // Populate Zustand store with user data
       if (userData) {

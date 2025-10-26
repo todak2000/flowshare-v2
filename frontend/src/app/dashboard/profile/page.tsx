@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,21 +19,16 @@ import {
   User as UserIcon,
   Mail,
   Phone,
-  Building2,
   Shield,
   Bell,
-  ArrowLeft,
   Save,
 } from "lucide-react";
-import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
-import { auth } from "@/lib/firebase";
+import { useAuthStore } from "@/store/auth-store";
 
 interface NotificationSettings {
-  email_notifications: boolean;
-  entry_updates: boolean;
-  reconciliation_alerts: boolean;
-  report_generation: boolean;
+  email_reports: boolean;
+  email_anomaly_alerts: boolean;
 }
 
 interface User {
@@ -42,6 +37,7 @@ interface User {
   full_name: string;
   phone_number: string;
   role: string;
+  organization: string;
   tenant_ids: string[];
   notification_settings: NotificationSettings;
 }
@@ -49,26 +45,26 @@ interface User {
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const { user: userr } = useAuthStore();
 
+  const [loading, setLoading] = useState(userr ? false : true);
   const [formData, setFormData] = useState({
     full_name: "",
     phone_number: "",
   });
 
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    email_notifications: true,
-    entry_updates: true,
-    reconciliation_alerts: true,
-    report_generation: true,
-  });
 
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
+  const [notificationSettings, setNotificationSettings] =
+    useState<NotificationSettings>(
+      userr?.notification_settings ?? {
+        email_reports: true,
+        email_anomaly_alerts: true,
+      }
+    );
 
   const loadUserProfile = async () => {
     try {
@@ -124,7 +120,10 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNotificationChange = (field: keyof NotificationSettings, value: boolean) => {
+  const handleNotificationChange = (
+    field: keyof NotificationSettings,
+    value: boolean
+  ) => {
     setNotificationSettings((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -151,6 +150,21 @@ export default function ProfilePage() {
     auditor: "Auditor",
   };
 
+  useEffect(() => {
+    if (userr) {
+      setUser(userr as User);
+      setFormData({
+        full_name: userr?.full_name ?? "",
+        phone_number: userr?.phone_number || "",
+      });
+      setNotificationSettings(
+        userr?.notification_settings ?? {
+          email_reports: true,
+          email_anomaly_alerts: true,
+        }
+      );
+    }
+  }, [userr]);
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -168,34 +182,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-b from-background via-background to-muted/20">
       {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-lg sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-primary-foreground">
-                  {getInitials(user.full_name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-lg font-bold">My Profile</h1>
-                <p className="text-xs text-muted-foreground">
-                  Manage your personal information
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
@@ -204,7 +192,9 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Overview</CardTitle>
-              <CardDescription>Your account information and role</CardDescription>
+              <CardDescription>
+                Your account information and role
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-start gap-6">
@@ -216,7 +206,9 @@ export default function ProfilePage() {
                 <div className="flex-1 space-y-3">
                   <div>
                     <h2 className="text-2xl font-bold">{user.full_name}</h2>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.organization}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={roleColors[user.role] || "bg-muted"}>
@@ -236,9 +228,7 @@ export default function ProfilePage() {
                 <UserIcon className="h-5 w-5 text-primary" />
                 <CardTitle>Personal Information</CardTitle>
               </div>
-              <CardDescription>
-                Update your personal details
-              </CardDescription>
+              <CardDescription>Update your personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -248,7 +238,9 @@ export default function ProfilePage() {
                   type="text"
                   placeholder="John Doe"
                   value={formData.full_name}
-                  onChange={(e) => handleInputChange("full_name", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("full_name", e.target.value)
+                  }
                 />
               </div>
 
@@ -279,7 +271,9 @@ export default function ProfilePage() {
                     placeholder="+1 (555) 000-0000"
                     className="pl-10"
                     value={formData.phone_number}
-                    onChange={(e) => handleInputChange("phone_number", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("phone_number", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -300,7 +294,9 @@ export default function ProfilePage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="email_notifications">Email Notifications</Label>
+                  <Label htmlFor="email_notifications">
+                    Email Notifications
+                  </Label>
                   <p className="text-xs text-muted-foreground">
                     Receive email notifications for important updates
                   </p>
@@ -308,39 +304,27 @@ export default function ProfilePage() {
                 <input
                   id="email_notifications"
                   type="checkbox"
+                  disabled
                   className="h-5 w-5 rounded border-gray-300"
-                  checked={notificationSettings.email_notifications}
+                  checked={notificationSettings.email_anomaly_alerts}
                   onChange={(e) =>
-                    handleNotificationChange("email_notifications", e.target.checked)
+                    handleNotificationChange(
+                      "email_anomaly_alerts",
+                      e.target.checked
+                    )
                   }
                 />
               </div>
 
               <Separator />
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="entry_updates">Entry Updates</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Notify when production entries are created or modified
-                  </p>
-                </div>
-                <input
-                  id="entry_updates"
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-gray-300"
-                  checked={notificationSettings.entry_updates}
-                  onChange={(e) =>
-                    handleNotificationChange("entry_updates", e.target.checked)
-                  }
-                />
-              </div>
-
               <Separator />
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="reconciliation_alerts">Reconciliation Alerts</Label>
+                  <Label htmlFor="reconciliation_alerts">
+                    Reconciliation Alerts
+                  </Label>
                   <p className="text-xs text-muted-foreground">
                     Notify when discrepancies are found during reconciliation
                   </p>
@@ -348,30 +332,11 @@ export default function ProfilePage() {
                 <input
                   id="reconciliation_alerts"
                   type="checkbox"
+                  disabled
                   className="h-5 w-5 rounded border-gray-300"
-                  checked={notificationSettings.reconciliation_alerts}
+                  checked={notificationSettings.email_reports}
                   onChange={(e) =>
-                    handleNotificationChange("reconciliation_alerts", e.target.checked)
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="report_generation">Report Generation</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Notify when reports are generated and ready to download
-                  </p>
-                </div>
-                <input
-                  id="report_generation"
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-gray-300"
-                  checked={notificationSettings.report_generation}
-                  onChange={(e) =>
-                    handleNotificationChange("report_generation", e.target.checked)
+                    handleNotificationChange("email_reports", e.target.checked)
                   }
                 />
               </div>

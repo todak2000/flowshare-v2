@@ -12,6 +12,7 @@ export interface UserProfile {
   phone_number?: string
   created_at?: string
   updated_at?: string
+  notification_settings?: {email_reports: boolean, email_anomaly_alerts: boolean}
 }
 
 interface AuthState {

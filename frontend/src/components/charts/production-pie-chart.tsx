@@ -1,44 +1,63 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
-import { ProductionStats } from "@/types/production"
+import * as React from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from "recharts";
+import { ProductionStats } from "@/types/production";
 
 interface ProductionPieChartProps {
-  stats: ProductionStats[]
-  loading?: boolean
+  stats: ProductionStats[];
+  loading?: boolean;
 }
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--success))',
-  'hsl(var(--warning))',
-  'hsl(var(--destructive))',
-  'hsl(269.3 90% 65%)',
-  'hsl(158.1 80% 70%)',
-  'hsl(82.4 85% 75%)',
-  'hsl(27.3 85% 68%)',
-]
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--destructive))",
+  "hsl(269.3 90% 65%)",
+  "hsl(158.1 80% 70%)",
+  "hsl(82.4 85% 75%)",
+  "hsl(27.3 85% 68%)",
+];
 
-export function ProductionPieChart({ stats, loading = false }: ProductionPieChartProps) {
+export function ProductionPieChart({
+  stats,
+  loading = false,
+}: ProductionPieChartProps) {
+  // Get theme-aware color
+  const getLegendColor = () => {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue('--foreground')
+      .trim() || '0 0% 45%';
+  };
+
   const chartData = React.useMemo(() => {
     return stats.map((stat) => ({
       name: stat.partner_name,
       value: stat.percentage,
       volume: stat.total_volume,
       count: stat.entry_count,
-    }))
-  }, [stats])
+    }));
+  }, [stats]);
 
   if (loading) {
     return (
       <div className="flex h-[400px] items-center justify-center rounded-lg border border-border bg-card p-6">
         <div className="flex items-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <span className="ml-3 text-muted-foreground">Loading statistics...</span>
+          <span className="ml-3 text-muted-foreground">
+            Loading statistics...
+          </span>
         </div>
       </div>
-    )
+    );
   }
 
   if (chartData.length === 0) {
@@ -46,57 +65,79 @@ export function ProductionPieChart({ stats, loading = false }: ProductionPieChar
       <div className="flex h-[400px] items-center justify-center rounded-lg border border-border bg-card p-6">
         <p className="text-muted-foreground">No statistics available</p>
       </div>
-    )
+    );
   }
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload
+      const data = payload[0].payload;
       return (
         <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
           <p className="font-semibold text-foreground">{data.name}</p>
           <p className="text-sm text-muted-foreground">
-            Percentage: <span className="font-medium text-foreground">{data.value.toFixed(2)}%</span>
+            Percentage:{" "}
+            <span className="font-medium text-foreground">
+              {data.value.toFixed(2)}%
+            </span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Volume: <span className="font-medium text-foreground">{data.volume.toFixed(2)} bbls</span>
+            Volume:{" "}
+            <span className="font-medium text-foreground">
+              {(data.volume / 1000).toFixed(1)} mbbls
+            </span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Entries: <span className="font-medium text-foreground">{data.count}</span>
+            Entries:{" "}
+            <span className="font-medium text-foreground">{data.count}</span>
           </p>
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
-    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  const CustomLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent,
+  }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     // Only show label if percentage is > 5%
-    if (percent < 0.05) return null
+    if (percent < 0.05) return null;
 
+    // Use white text with shadow for better visibility on colored segments
     return (
       <text
         x={x}
         y={y}
-        fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
+        fill="#ffffff"
+        textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
-        className="text-sm font-semibold"
-        style={{ textShadow: '0 0 3px rgba(0,0,0,0.8)' }}
+        className="text-sm font-bold"
+        style={{
+          textShadow: "0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9)",
+          paintOrder: "stroke fill",
+          stroke: "rgba(0,0,0,0.5)",
+          strokeWidth: "2px"
+        }}
       >
         {`${(percent * 100).toFixed(1)}%`}
       </text>
-    )
-  }
+    );
+  };
 
   return (
     <div className="rounded-lg border border-border bg-card p-6">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Production Distribution</h3>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">
+        Production Distribution
+      </h3>
       <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
@@ -112,7 +153,10 @@ export function ProductionPieChart({ stats, loading = false }: ProductionPieChar
             animationDuration={800}
           >
             {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
@@ -120,11 +164,11 @@ export function ProductionPieChart({ stats, loading = false }: ProductionPieChar
             verticalAlign="bottom"
             height={36}
             wrapperStyle={{
-              color: 'hsl(var(--foreground))',
+              color: `hsl(${getLegendColor()})`,
             }}
             formatter={(value: string, entry: any) => {
-              const data = chartData.find(d => d.name === value)
-              return `${value} (${data?.value.toFixed(1)}%)`
+              const data = chartData.find((d) => d.name === value);
+              return `${value} (${data?.value.toFixed(1)}%)`;
             }}
           />
         </PieChart>
@@ -142,22 +186,33 @@ export function ProductionPieChart({ stats, loading = false }: ProductionPieChar
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <h4 className="font-semibold text-foreground">{stat.partner_name}</h4>
+              <h4 className="font-semibold text-foreground">
+                {stat.partner_name}
+              </h4>
             </div>
             <div className="mt-2 space-y-1 text-sm">
               <p className="text-muted-foreground">
-                Share: <span className="font-medium text-foreground">{stat.percentage.toFixed(2)}%</span>
+                Share:{" "}
+                <span className="font-medium text-foreground">
+                  {stat.percentage.toFixed(2)}%
+                </span>
               </p>
               <p className="text-muted-foreground">
-                Volume: <span className="font-medium text-foreground">{stat.total_volume.toFixed(2)} bbls</span>
+                Volume:{" "}
+                <span className="font-medium text-foreground">
+                  {(Number(stat.total_volume) / 1000).toFixed(1)} mbbls
+                </span>
               </p>
               <p className="text-muted-foreground">
-                Entries: <span className="font-medium text-foreground">{stat.entry_count}</span>
+                Entries:{" "}
+                <span className="font-medium text-foreground">
+                  {stat.entry_count}
+                </span>
               </p>
             </div>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }

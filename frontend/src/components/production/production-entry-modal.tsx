@@ -256,27 +256,22 @@ export function ProductionEntryModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Info about today's date */}
+          <div className="rounded-lg bg-muted p-3">
+            <p className="text-sm text-muted-foreground">
+              <strong>Date:</strong> {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Production entries are automatically recorded for today's date
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
-            {/* Measurement Date */}
-            <div className="col-span-2">
-              <Label htmlFor="measurement_date">
-                Measurement Date <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="measurement_date"
-                name="measurement_date"
-                type="date"
-                value={formData.measurement_date}
-                onChange={handleChange}
-                max={new Date().toISOString().split("T")[0]}
-                className={errors.measurement_date ? "border-destructive" : ""}
-              />
-              {errors.measurement_date && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.measurement_date}
-                </p>
-              )}
-            </div>
 
             {/* Gross Volume */}
             <div>

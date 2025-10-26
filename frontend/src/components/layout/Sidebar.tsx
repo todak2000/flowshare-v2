@@ -55,10 +55,14 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
-  const userInitials = user?.email?.slice(0, 2).toUpperCase() || "U";
+  const userInitials = user?.full_name?.slice(0, 2).toUpperCase() || "U";
 
   const nav = useMemo(() => {
     return role === "field_operator" ? operatorNavItems : navItems;
+  }, [role]);
+
+  const navSettings = useMemo(() => {
+    return role === "coordinator" ? settingsItems : [];
   }, [role]);
   return (
     <aside
@@ -91,7 +95,7 @@ export function Sidebar({
 
           <Separator className="my-4" />
 
-          {settingsItems.map((item) => (
+          {navSettings.map((item) => (
             <NavItem
               key={item.href}
               href={item.href}
@@ -116,8 +120,10 @@ export function Sidebar({
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user?.email}</p>
-              <Badge variant="secondary" className="text-xs mt-1">
-                {user?.role || "User"}
+              <Badge variant="secondary" className="text-xs mt-1 capitalize">
+                {user?.role === "field_operator"
+                  ? "Field Operator"
+                  : user?.role || "User"}
               </Badge>
             </div>
           </Link>

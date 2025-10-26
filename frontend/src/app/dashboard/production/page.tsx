@@ -43,14 +43,22 @@ export default function ProductionPage() {
   const [pageSize] = React.useState(31); // Monthly partition - 31 days
   const [totalItems, setTotalItems] = React.useState(0);
   const [filters, setFilters] = React.useState<ProductionFilters>(() => {
-    // Default to current month
+    // Default to current month (Oct 1 - Oct 31 for October)
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
+    // Format as YYYY-MM-DD in local timezone (not UTC)
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     return {
-      start_date: startDate.toISOString().split("T")[0],
-      end_date: endDate.toISOString().split("T")[0],
+      start_date: formatLocalDate(startDate),
+      end_date: formatLocalDate(endDate),
     };
   });
   const [showCharts, setShowCharts] = React.useState(false);
@@ -64,6 +72,7 @@ export default function ProductionPage() {
   const [approveModalOpen, setApproveModalOpen] = React.useState(false);
   const [selectedEntry, setSelectedEntry] =
     React.useState<ProductionEntry | null>(null);
+  const [hasTodayEntry, setHasTodayEntry] = React.useState(false);
 
   const userRole = getUserRole() || "";
 
@@ -146,6 +155,18 @@ export default function ProductionPage() {
           ? (page - 1) * pageSize + data.length
           : page * pageSize + 1
       );
+
+      // Check if today's entry exists (for field operators)
+      if (userRole === "field_operator" && user?.partner_id) {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayEntry = data.find(entry => {
+          const entryDate = new Date(entry.measurement_date);
+          const entryDateStr = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}-${String(entryDate.getDate()).padStart(2, '0')}`;
+          return entryDateStr === todayStr && entry.partner_id === user.partner_id;
+        });
+        setHasTodayEntry(!!todayEntry);
+      }
     } catch (error: any) {
       console.error("Failed to fetch production entries:", error);
       if (error.response?.status === 401) {
@@ -154,7 +175,7 @@ export default function ProductionPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters, router, getTenantId]);
+  }, [page, pageSize, filters, router, getTenantId, userRole, user]);
 
   // Fetch statistics
   const fetchStats = React.useCallback(async () => {
@@ -505,11 +526,16 @@ export default function ProductionPage() {
                 Export
               </Button>
             )}
-            {userRole === "field_operator" && (
+            {userRole === "field_operator" && !hasTodayEntry && (
               <Button size="sm" onClick={() => setEntryModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Entry
               </Button>
+            )}
+            {userRole === "field_operator" && hasTodayEntry && (
+              <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                ✓ Today's production data already submitted
+              </div>
             )}
           </div>
         </div>
