@@ -5,6 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { auth } from "./firebase";
+import { handleApiError } from "./error-handler";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const TOKEN_KEY = "flowshare-user-token";
@@ -60,6 +61,10 @@ class ApiClient {
             return Promise.reject(refreshError);
           }
         }
+
+        // Add user-friendly error to the error object
+        const appError = handleApiError(error);
+        (error as any).appError = appError;
 
         return Promise.reject(error);
       }
@@ -149,6 +154,15 @@ class ApiClient {
   async delete<T>(url: string): Promise<T> {
     const response = await this.client.delete<T>(url);
     return response.data;
+  }
+
+  // Public method to get auth headers for external fetch requests
+  async getAuthHeaders(): Promise<{ Authorization: string } | {}> {
+    const token = await this.getValidToken();
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    return {};
   }
 }
 

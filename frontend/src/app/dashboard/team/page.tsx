@@ -38,6 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useAuthStore } from "@/store/auth-store";
 
 interface Partner {
   id: string;
@@ -47,6 +48,7 @@ interface Partner {
   role: string;
   status: string;
   created_at: string;
+  organization?: string;
 }
 
 interface Invitation {
@@ -68,6 +70,8 @@ function TeamManagementContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isWelcome = searchParams.get("welcome") === "true";
+  const { getUserRole } = useAuthStore();
+  const userRole = getUserRole(); // Get role from query params
 
   const [cancelInvitationId, setCancelInvitationId] = useState<string | null>(
     null
@@ -79,13 +83,15 @@ function TeamManagementContent() {
   const [inviteData, setInviteData] = useState({
     partnerName: "",
     email: "",
-    role: "partner",
+    role: userRole === "partner" ? "field_operator" : "partner",
   });
+
   const [inviteError, setInviteError] = useState("");
   const [inviting, setInviting] = useState(false);
   const [tenant, setTenant] = useState<any>(null);
   const [currentPartnerCount, setCurrentPartnerCount] = useState(0);
   const [maxPartners, setMaxPartners] = useState(5);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     fetchTeamData();
@@ -95,7 +101,19 @@ function TeamManagementContent() {
     try {
       setLoading(true);
 
-      // 1. Get tenant first
+      // 1. Get current user
+      const userData = await apiClient
+        .get<any>("/api/auth/me")
+        .catch(() => null);
+      setCurrentUser(userData);
+
+      // Check if field operator - they shouldn't access this page
+      if (userData?.role === "field_operator") {
+        router.push("/dashboard");
+        return;
+      }
+
+      // 2. Get tenant first
       const tenantData = await apiClient
         .get<Tenant>("/api/tenants/me")
         .catch(() => null);
@@ -105,7 +123,7 @@ function TeamManagementContent() {
         throw new Error("Tenant not found");
       }
 
-      // 2. Fetch partners and invitations
+      // 3. Fetch partners and invitations
       const [rawPartners, invitationsData] = await Promise.all([
         apiClient.get<Partner[]>("/api/partners").catch(() => []),
         apiClient
@@ -118,27 +136,43 @@ function TeamManagementContent() {
       // Map User[] → Partner[]
       const partnersData = rawPartners.map((user) => ({
         id: user.id,
-        name: user.full_name? user.full_name: user.name, // 👈 critical mapping
+        name: user.full_name ? user.full_name : user.name, // 👈 critical mapping
         email: user.email,
         role: user.role,
         status: "active",
         created_at: user.created_at,
+        organization: user.organization, // Include organization/company name
       }));
 
       setPartners(Array.isArray(partnersData) ? partnersData : []);
       setInvitations(Array.isArray(invitationsData) ? invitationsData : []);
 
-      // Calculate limits
-      const plan = tenantData.subscription_plan;
-      const limits: Record<string, number> = {
-        starter: 5,
-        professional: 20,
-        enterprise: -1,
-      };
-      setMaxPartners(limits[plan] || 5);
-      setCurrentPartnerCount(
-        (partnersData?.length || 0) + (invitationsData?.length || 0)
-      );
+      // Calculate limits based on role
+      if (userData?.role === "partner") {
+        // Partners can only invite field operators
+        // Only count ACTIVE field operators (not pending invitations)
+        const fieldOperators = partnersData.filter(
+          (p) => p.role === "field_operator"
+        );
+
+        // For now, allow up to 10 field operators per partner
+        // This should ideally come from the pricing plan
+        setMaxPartners(10);
+        setCurrentPartnerCount(fieldOperators.length);
+      } else {
+        // Coordinators manage all partners
+        // Only count ACTIVE partners (not pending invitations or field operators)
+        const activePartners = partnersData.filter((p) => p.role === "partner");
+
+        const plan = tenantData.subscription_plan;
+        const limits: Record<string, number> = {
+          starter: 5,
+          professional: 20,
+          enterprise: -1,
+        };
+        setMaxPartners(limits[plan] || 5);
+        setCurrentPartnerCount(activePartners.length);
+      }
     } catch (error) {
       console.error("Failed to fetch team data:", error);
     } finally {
@@ -173,21 +207,22 @@ function TeamManagementContent() {
       setShowInviteForm(false);
       await fetchTeamData();
     } catch (error: any) {
-      let errorMessage = "Failed to send invitation";
+      let errorMsg = "Failed to send invitation";
 
       if (error.response?.data?.detail) {
         // Handle both string and object cases
         const detail = error.response.data.detail;
         if (typeof detail === "string") {
-          errorMessage = detail;
+          errorMsg = detail;
         } else if (Array.isArray(detail)) {
           // Sometimes it's an array of errors
-          errorMessage = detail.map((err: any) => err.msg || err).join(", ");
+          errorMsg = detail.map((err: any) => err.msg || err).join(", ");
         } else if (typeof detail === "object") {
           // Extract meaningful message from object
-          errorMessage = detail.msg || JSON.stringify(detail);
+          errorMsg = detail.msg || JSON.stringify(detail);
         }
       }
+      setInviteError(errorMsg);
     } finally {
       setInviting(false);
     }
@@ -242,63 +277,20 @@ function TeamManagementContent() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading team data...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-br from-background via-background to-muted/20">
       {/* Sidebar - reusing from dashboard */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-72 bg-card border-r border-border hidden lg:block">
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-violet-600 bg-clip-text text-transparent">
-              FlowShare
-            </span>
-          </div>
-
-          <nav className="flex-1 space-y-1 p-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 rounded-lg px-4 py-3 text-muted-foreground font-medium transition-all hover:bg-muted hover:text-foreground"
-            >
-              <Users className="h-5 w-5" />
-              <span>Dashboard</span>
-            </Link>
-            <Link
-              href="/dashboard/team"
-              className="flex items-center gap-3 rounded-lg bg-primary/10 px-4 py-3 text-primary font-medium transition-all hover:bg-primary/20"
-            >
-              <Users className="h-5 w-5" />
-              <span>Team</span>
-            </Link>
-            <Separator className="my-4" />
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center gap-3 rounded-lg px-4 py-3 text-muted-foreground font-medium transition-all hover:bg-muted hover:text-foreground"
-            >
-              <SettingsIcon className="h-5 w-5" />
-              <span>Settings</span>
-            </Link>
-          </nav>
-        </div>
-      </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-72">
+      <div className="">
         <header className="border-b border-border bg-background/80 backdrop-blur-lg px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Team Management</h1>
               <p className="text-sm text-muted-foreground">
-                Invite and manage your joint venture partners
+                {currentUser?.role === "partner"
+                  ? "Invite and manage your field operators"
+                  : "Invite and manage your joint venture partners"}
               </p>
             </div>
             <Button
@@ -306,7 +298,9 @@ function TeamManagementContent() {
               className="bg-primary hover:bg-primary/90 shadow-lg"
             >
               <UserPlus className="mr-2 h-4 w-4" />
-              Invite Partner
+              {currentUser?.role === "partner"
+                ? "Invite Field Operator"
+                : "Invite Partner"}
             </Button>
           </div>
         </header>
@@ -317,7 +311,7 @@ function TeamManagementContent() {
             <Card className="border-2 border-primary/50 bg-primary/5">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1">
@@ -325,18 +319,22 @@ function TeamManagementContent() {
                       Welcome to FlowShare! 🎉
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      Your account and tenant have been created successfully.
-                      Now, let's invite your partners to join your joint
-                      venture. You can invite up to{" "}
-                      {maxPartners === -1 ? "unlimited" : maxPartners} partners
-                      on your current plan.
+                      {currentUser?.role === "partner"
+                        ? `Your account has been created successfully. Now, you can invite your field operators to help manage production data. You can invite up to ${
+                            maxPartners === -1 ? "unlimited" : maxPartners
+                          } field operators.`
+                        : `Your account and tenant have been created successfully. Now, let's invite your partners to join your joint venture. You can invite up to ${
+                            maxPartners === -1 ? "unlimited" : maxPartners
+                          } partners on your current plan.`}
                     </p>
                     <Button
                       onClick={() => setShowInviteForm(true)}
                       className="bg-primary"
                     >
                       <UserPlus className="mr-2 h-4 w-4" />
-                      Invite Your First Partner
+                      {currentUser?.role === "partner"
+                        ? "Invite Your First Field Operator"
+                        : "Invite Your First Partner"}
                     </Button>
                   </div>
                 </div>
@@ -349,7 +347,7 @@ function TeamManagementContent() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Partner Capacity</CardTitle>
+                  <CardTitle>{userRole ==='partner' ? 'Field Operator':'Partner'} Capacity</CardTitle>
                   <CardDescription>
                     {maxPartners === -1
                       ? "Unlimited partners on your plan"
@@ -394,37 +392,49 @@ function TeamManagementContent() {
           {showInviteForm && (
             <Card className="border-2 border-primary/50">
               <CardHeader>
-                <CardTitle>Invite Partner</CardTitle>
+                <CardTitle>
+                  {currentUser?.role === "partner"
+                    ? "Invite Field Operator"
+                    : "Invite Partner"}
+                </CardTitle>
                 <CardDescription>
-                  Send an invitation to a partner company
+                  {currentUser?.role === "partner"
+                    ? "Send an invitation to a field operator"
+                    : "Send an invitation to a partner company"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleInvitePartner} className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="partnerName">
-                        Partner Company Name *
-                      </Label>
-                      <Input
-                        id="partnerName"
-                        placeholder="ABC Oil & Gas"
-                        value={inviteData.partnerName}
-                        onChange={(e) =>
-                          setInviteData((prev) => ({
-                            ...prev,
-                            partnerName: e.target.value,
-                          }))
-                        }
-                        required
-                      />
-                    </div>
+                    {currentUser?.role !== "partner" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="partnerName">
+                          Partner Company Name *
+                        </Label>
+                        <Input
+                          id="partnerName"
+                          placeholder="ABC Oil & Gas"
+                          value={inviteData.partnerName}
+                          onChange={(e) =>
+                            setInviteData((prev) => ({
+                              ...prev,
+                              partnerName: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="email">Email Address *</Label>
                       <Input
                         id="email"
                         type="email"
-                        placeholder="partner@company.com"
+                        placeholder={
+                          currentUser?.role === "partner"
+                            ? "operator@company.com"
+                            : "partner@company.com"
+                        }
                         value={inviteData.email}
                         onChange={(e) =>
                           setInviteData((prev) => ({
@@ -468,55 +478,127 @@ function TeamManagementContent() {
           )}
 
           {/* Active Partners */}
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle>Active Partners ({partners.length})</CardTitle>
-              <CardDescription>
-                Partners who have accepted their invitation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {partners.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    No active partners yet
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Invite partners to get started
-                  </p>
-                </div>
-              ) : (
+          {userRole === "coordinator" && (
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle>
+                  Active Partners (
+                  {partners.filter((p) => p.role === "partner").length})
+                </CardTitle>
+                <CardDescription>
+                  Partners who have accepted their invitation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {partners.filter((p) => p.role === "partner").length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No active partners yet
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Invite partners to get started
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {partners
+                      .filter((p) => p.role === "partner")
+                      .map((partner) => (
+                        <div
+                          key={partner.id}
+                          className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                        >
+                          <Avatar className="h-12 w-12 border-2 border-primary/20">
+                            <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                              {partner.name?.slice(0, 2)?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">
+                              {partner.name}
+                              {currentUser?.id === partner.id && (
+                                <span className="ml-2 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                                  (YOU)
+                                </span>
+                              )}
+                            </p>
+                            {partner.organization && (
+                              <p className="text-sm font-medium text-primary truncate">
+                                {partner.organization}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground truncate">
+                              {partner.email}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={getRoleColor(partner.role) as any}
+                            className="capitalize"
+                          >
+                            {partner.role.replace("_", " ")}
+                          </Badge>
+                          <Badge variant="success">Active</Badge>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Active Field Operators (only visible to coordinators and partners) */}
+          {userRole ==='partner' && partners.filter((p) => p.role === "field_operator").length > 0 && (
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle>
+                  Active Field Operators (
+                  {partners.filter((p) => p.role === "field_operator").length})
+                </CardTitle>
+                <CardDescription>
+                  Field operators who have accepted their invitation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-3">
-                  {partners.map((partner) => (
-                    <div
-                      key={partner.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <Avatar className="h-12 w-12 border-2 border-primary/20">
-                        <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {partner.name?.slice(0, 2)?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{partner.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {partner.email}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={getRoleColor(partner.role) as any}
-                        className="capitalize"
+                  {partners
+                    .filter((p) => p.role === "field_operator")
+                    .map((operator) => (
+                      <div
+                        key={operator.id}
+                        className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                       >
-                        {partner.role.replace("_", " ")}
-                      </Badge>
-                      <Badge variant="success">Active</Badge>
-                    </div>
-                  ))}
+                        <Avatar className="h-12 w-12 border-2 border-primary/20">
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                            {operator.name?.slice(0, 2)?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {operator.name}
+                          </p>
+                          {operator.organization && (
+                            <p className="text-sm font-medium text-primary truncate">
+                              {operator.organization}
+                            </p>
+                          )}
+                          <p className="text-sm text-muted-foreground truncate">
+                            {operator.email}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={getRoleColor(operator.role) as any}
+                          className="capitalize"
+                        >
+                          {operator.role.replace("_", " ")}
+                        </Badge>
+                        <Badge variant="success">Active</Badge>
+                      </div>
+                    ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Pending Invitations */}
           {invitations.length > 0 && (

@@ -10,7 +10,7 @@ interface ProductionFiltersProps {
   filters: ProductionFilters
   onFiltersChange: (filters: ProductionFilters) => void
   showPartnerFilter?: boolean
-  partners?: Array<{ id: string; name: string }>
+  partners?: Array<{ id: string; name: string; organization?: string }>
 }
 
 export function ProductionFiltersComponent({
@@ -20,13 +20,16 @@ export function ProductionFiltersComponent({
   partners = [],
 }: ProductionFiltersProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
+  const [activePreset, setActivePreset] = React.useState<string | null>('current_month')
 
   const handleFilterChange = (key: keyof ProductionFilters, value: any) => {
     onFiltersChange({ ...filters, [key]: value || undefined })
+    setActivePreset(null) // Clear active preset when manual filter is applied
   }
 
   const clearFilters = () => {
     onFiltersChange({})
+    setActivePreset(null)
   }
 
   const setDatePreset = (preset: 'last_6_months' | 'last_year' | 'last_3_months' | 'current_month') => {
@@ -55,6 +58,21 @@ export function ProductionFiltersComponent({
       start_date: startDate.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0],
     })
+    setActivePreset(preset)
+  }
+
+  const setMonthPreset = (monthOffset: number) => {
+    const now = new Date()
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+    const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0)
+
+    onFiltersChange({
+      ...filters,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+    })
+    setActivePreset(`month_${monthOffset}`)
   }
 
   const activeFilterCount = Object.values(filters).filter(v => v !== undefined && v !== '').length
@@ -96,42 +114,64 @@ export function ProductionFiltersComponent({
       </div>
 
       {/* Date Presets */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDatePreset('current_month')}
-          className="h-8 text-xs"
-        >
-          <Calendar className="mr-1 h-3 w-3" />
-          Current Month
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDatePreset('last_3_months')}
-          className="h-8 text-xs"
-        >
-          Last 3 Months
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDatePreset('last_6_months')}
-          className="h-8 text-xs"
-        >
-          Last 6 Months
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDatePreset('last_year')}
-          className="h-8 text-xs"
-        >
-          Last Year
-        </Button>
-      </div>
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={activePreset === 'current_month' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDatePreset('current_month')}
+            className="h-8 text-xs"
+          >
+            <Calendar className="mr-1 h-3 w-3" />
+            Current Month
+          </Button>
+          <Button
+            variant={activePreset === 'last_3_months' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDatePreset('last_3_months')}
+            className="h-8 text-xs"
+          >
+            Last 3 Months
+          </Button>
+          <Button
+            variant={activePreset === 'last_6_months' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDatePreset('last_6_months')}
+            className="h-8 text-xs"
+          >
+            Last 6 Months
+          </Button>
+          <Button
+            variant={activePreset === 'last_year' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDatePreset('last_year')}
+            className="h-8 text-xs"
+          >
+            Last Year
+          </Button>
+        </div>
 
+        {/* Month Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Or select a specific month:</span>
+          <select
+            onChange={(e) => setMonthPreset(parseInt(e.target.value))}
+            value={activePreset?.startsWith('month_') ? activePreset.replace('month_', '') : ''}
+            className="h-8 rounded-md border border-input bg-background px-3 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">Select Month</option>
+            {Array.from({ length: 12 }, (_, i) => {
+              const offset = -i
+              const date = new Date(new Date().getFullYear(), new Date().getMonth() + offset, 1)
+              return (
+                <option key={offset} value={offset}>
+                  {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </option>
+              )
+            })}
+          </select>
+        </div>
+      </div>
       {/* Expanded Filters */}
       {isExpanded && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -147,7 +187,7 @@ export function ProductionFiltersComponent({
                 <option value="">All Partners</option>
                 {partners.map((partner) => (
                   <option key={partner.id} value={partner.id}>
-                    {partner.name}
+                    {partner.organization || partner.name}
                   </option>
                 ))}
               </select>
@@ -163,10 +203,8 @@ export function ProductionFiltersComponent({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">All Statuses</option>
-              <option value={ProductionEntryStatus.DRAFT}>Draft</option>
               <option value={ProductionEntryStatus.PENDING}>Pending</option>
               <option value={ProductionEntryStatus.APPROVED}>Approved</option>
-              <option value={ProductionEntryStatus.VALIDATED}>Validated</option>
               <option value={ProductionEntryStatus.FLAGGED}>Flagged</option>
               <option value={ProductionEntryStatus.REJECTED}>Rejected</option>
             </select>

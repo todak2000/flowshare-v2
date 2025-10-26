@@ -40,19 +40,48 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [isInvitee, setIsInvitee] = useState(false);
+  const [invitationData, setInvitationData] = useState<{
+    invitationId: string;
+    email: string;
+    role: string;
+    tenantId: string;
+    partnerName: string;
+  } | null>(null);
 
   useEffect(() => {
-    // Check if payment was completed
-    const paymentCompleted = sessionStorage.getItem("paymentCompleted");
-    const plan = sessionStorage.getItem("selectedPlan");
+    // Check if this is an invitee registration
+    const invitationAccepted = sessionStorage.getItem("invitationAccepted");
 
-    if (!paymentCompleted || !plan) {
-      // Redirect to plan selection if payment not completed
-      router.push("/payment/select-plan");
-      return;
+    if (invitationAccepted === "true") {
+      // Invitee flow - no payment required
+      const invitationId = sessionStorage.getItem("invitationId");
+      const email = sessionStorage.getItem("invitationEmail");
+      const role = sessionStorage.getItem("invitationRole");
+      const tenantId = sessionStorage.getItem("invitationTenantId");
+      const partnerName = sessionStorage.getItem("invitationPartnerName");
+
+      if (invitationId && email && role && tenantId) {
+        setIsInvitee(true);
+        setInvitationData({ invitationId, email, role, tenantId, partnerName: partnerName || "" });
+        setFormData(prev => ({ ...prev, email }));
+        setSelectedPlan("invitee"); // Special marker for invitees
+      } else {
+        router.push("/");
+      }
+    } else {
+      // Regular coordinator flow - payment required
+      const paymentCompleted = sessionStorage.getItem("paymentCompleted");
+      const plan = sessionStorage.getItem("selectedPlan");
+
+      if (!paymentCompleted || !plan) {
+        // Redirect to plan selection if payment not completed
+        router.push("/payment/select-plan");
+        return;
+      }
+
+      setSelectedPlan(plan);
     }
-
-    setSelectedPlan(plan);
   }, [router]);
 
   const handleInputChange = (field: string, value: string) => {
@@ -92,37 +121,81 @@ export default function RegisterPage() {
       // 2. Get the ID token
       const idToken = await userCredential.user.getIdToken();
 
-      // 3. Get payment data from sessionStorage
-      const paymentDataStr = sessionStorage.getItem("paymentData");
-      const paymentData = paymentDataStr ? JSON.parse(paymentDataStr) : null;
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      // 4. Register user AND create tenant in backend
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await axios.post(
-        `${API_URL}/api/auth/register`,
-        {
-          full_name: formData.fullName,
-          tenant_name: formData.tenantName,
-          phone_number: formData.phoneNumber,
-          role: "coordinator", // Default role for first user
-          subscription_plan: selectedPlan,
-          payment_data: paymentData,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-            "Content-Type": "application/json",
+      if (isInvitee && invitationData) {
+        // 3a. Invitee registration flow
+        // Register user without creating a tenant
+        await axios.post(
+          `${API_URL}/api/auth/register-invitee`,
+          {
+            full_name: formData.fullName,
+            phone_number: formData.phoneNumber,
+            invitation_id: invitationData.invitationId,
           },
-        }
-      );
-      // Clear session storage
-      sessionStorage.removeItem("paymentCompleted");
-      sessionStorage.removeItem("selectedPlan");
-      sessionStorage.removeItem("paymentData");
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      // Redirect to team management to add partners
-      router.push("/dashboard/team?welcome=true");
+        // Clear session storage
+        sessionStorage.removeItem("invitationAccepted");
+        sessionStorage.removeItem("invitationId");
+        sessionStorage.removeItem("invitationEmail");
+        sessionStorage.removeItem("invitationRole");
+        sessionStorage.removeItem("invitationTenantId");
+        sessionStorage.removeItem("invitationPartnerName");
+
+        // Redirect based on role
+        const role = invitationData.role;
+        if (role === "partner") {
+          router.push("/dashboard/team?welcome=true&role=partner");
+        } else if (role === "field_operator") {
+          router.push("/dashboard");
+        } else if (role === "auditor") {
+          router.push("/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
+      } else {
+        // 3b. Coordinator registration flow
+        // Get payment data from sessionStorage
+        const paymentDataStr = sessionStorage.getItem("paymentData");
+        const paymentData = paymentDataStr ? JSON.parse(paymentDataStr) : null;
+
+        // Register user AND create tenant in backend
+        await axios.post(
+          `${API_URL}/api/auth/register`,
+          {
+            full_name: formData.fullName,
+            tenant_name: formData.tenantName,
+            phone_number: formData.phoneNumber,
+            role: "coordinator", // Default role for first user
+            subscription_plan: selectedPlan,
+            payment_data: paymentData,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // Clear session storage
+        sessionStorage.removeItem("paymentCompleted");
+        sessionStorage.removeItem("selectedPlan");
+        sessionStorage.removeItem("paymentData");
+
+        // Mark as first-time registration for login page to detect
+        sessionStorage.setItem("newRegistration", "true");
+
+        // Redirect to login page
+        router.push("/auth/login?registered=true");
+      }
     } catch (err: any) {
       console.error("Registration error:", err);
       setError(
@@ -175,12 +248,21 @@ export default function RegisterPage() {
       <main className="container mx-auto px-6 py-16">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <Badge variant="secondary" className="mb-4">
-              {planNames[selectedPlan]} Plan Selected
-            </Badge>
+            {!isInvitee && (
+              <Badge variant="secondary" className="mb-4">
+                {planNames[selectedPlan]} Plan Selected
+              </Badge>
+            )}
+            {isInvitee && invitationData && (
+              <Badge variant="secondary" className="mb-4 capitalize">
+                Joining as {invitationData.role.replace("_", " ")}
+              </Badge>
+            )}
             <h1 className="text-4xl font-bold mb-4">Create Your Account</h1>
             <p className="text-muted-foreground">
-              Set up your tenant and start managing your joint ventures
+              {isInvitee
+                ? "Complete your registration to join the joint venture"
+                : "Set up your tenant and start managing your joint ventures"}
             </p>
           </div>
 
@@ -228,8 +310,14 @@ export default function RegisterPage() {
                           handleInputChange("email", e.target.value)
                         }
                         required
+                        disabled={isInvitee}
                       />
                     </div>
+                    {isInvitee && (
+                      <p className="text-xs text-muted-foreground">
+                        This email is pre-filled from your invitation
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -251,31 +339,33 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Tenant Information */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Building2 className="h-4 w-4" />
-                    <span>Joint Venture / Company Information</span>
-                  </div>
+                {/* Tenant Information - Only for coordinators */}
+                {!isInvitee && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>Joint Venture / Company Information</span>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="tenantName">JV/Company Name *</Label>
-                    <Input
-                      id="tenantName"
-                      type="text"
-                      placeholder="Acme Oil & Gas JV"
-                      value={formData.tenantName}
-                      onChange={(e) =>
-                        handleInputChange("tenantName", e.target.value)
-                      }
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This will be the name of your joint venture or
-                      organization
-                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="tenantName">JV/Company Name *</Label>
+                      <Input
+                        id="tenantName"
+                        type="text"
+                        placeholder="Acme Oil & Gas JV"
+                        value={formData.tenantName}
+                        onChange={(e) =>
+                          handleInputChange("tenantName", e.target.value)
+                        }
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This will be the name of your joint venture or
+                        organization
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Password */}
                 <div className="space-y-4">

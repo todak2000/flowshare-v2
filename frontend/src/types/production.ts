@@ -1,10 +1,9 @@
 export enum ProductionEntryStatus {
-  DRAFT = "draft",
   PENDING = "pending",
   APPROVED = "approved",
-  VALIDATED = "validated",
   FLAGGED = "flagged",
-  REJECTED = "rejected",
+  PENDING_APPROVAL = "pending_approval",
+  REJECTED = "rejected"
 }
 
 export interface ProductionEntry {
@@ -26,6 +25,9 @@ export interface ProductionEntry {
   updated_at: string
   approved_by?: string
   approved_at?: string
+  edited_by?: string
+  edited_at?: string
+  edit_reason?: string
 }
 
 export interface ProductionEntryCreate {
@@ -50,6 +52,7 @@ export interface ProductionEntryUpdate {
   meter_factor?: number
   status?: ProductionEntryStatus
   validation_notes?: string
+  edit_reason?: string
 }
 
 export interface ProductionStats {
