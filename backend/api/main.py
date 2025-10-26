@@ -20,7 +20,8 @@ from routers import (
     terminal_receipts,
     analytics,
     forecasts,
-    partners
+    partners,
+    demo
 )
 
 # Configure logging
@@ -93,6 +94,7 @@ app.include_router(terminal_receipts.router, prefix="/api/terminal-receipts", ta
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
 app.include_router(partners.router, prefix="/api/partners", tags=["Partners"])
+app.include_router(demo.router, prefix="/api", tags=["Demo/Admin - No Auth"])
 
 
 if __name__ == "__main__":

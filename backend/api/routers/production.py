@@ -18,8 +18,17 @@ from shared.models.production import (
     ProductionStats
 )
 from typing import List, Optional, Dict
+from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class ProductionEntriesResponse(BaseModel):
+    """Response model for paginated production entries."""
+    entries: List[ProductionEntry]
+    total: int
+    page: int
+    page_size: int
 
 
 async def get_user_role_and_partner(user_id: str) -> tuple[str, Optional[str], str]:
@@ -97,7 +106,7 @@ async def create_production_entry(
     return ProductionEntry(id=entry_id, **entry_doc)
 
 
-@router.get("/entries", response_model=List[ProductionEntry])
+@router.get("/entries", response_model=ProductionEntriesResponse)
 async def list_production_entries(
     tenant_id: str = Query(...),
     partner_id: Optional[str] = Query(None),
@@ -172,12 +181,20 @@ async def list_production_entries(
 
         all_entries.append(entry)
 
+    # Get total count before pagination
+    total_count = len(all_entries)
+
     # Apply pagination
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     paginated_entries = all_entries[start_idx:end_idx]
 
-    return paginated_entries
+    return ProductionEntriesResponse(
+        entries=paginated_entries,
+        total=total_count,
+        page=page,
+        page_size=page_size
+    )
 
 
 @router.get("/entries/{entry_id}", response_model=ProductionEntry)

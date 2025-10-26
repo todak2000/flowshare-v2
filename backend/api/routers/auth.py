@@ -346,3 +346,25 @@ async def get_current_user(
     user_data["last_login_at"] = now
 
     return User(id=users[0].id, **user_data)
+
+
+@router.get("/users/by-email")
+async def get_user_by_email(email: str):
+    """
+    Get user by email (for demo/admin purposes).
+    WARNING: This endpoint bypasses authentication - use only for demo/testing.
+    """
+    db = get_firestore()
+    users_ref = db.collection(FirestoreCollections.USERS)
+
+    # Find user by email
+    users = await users_ref.where("email", "==", email).limit(1).get()
+
+    if len(users) == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_data = users[0].to_dict()
+    return {
+        "id": users[0].id,
+        **user_data
+    }

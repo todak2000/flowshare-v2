@@ -121,14 +121,30 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
 
         # Group entries by partner and sum volumes
         partner_data = {}
+        partner_names_cache = {}  # Cache partner organization names
+
         for doc in approved_entries_query:
             entry = doc.to_dict()
             partner_id = entry["partner_id"]
 
             if partner_id not in partner_data:
+                # Fetch partner organization name from users collection
+                partner_name = f"Partner {partner_id[-6:]}"  # Fallback
+                if partner_id not in partner_names_cache:
+                    try:
+                        partner_doc = await db.collection(FirestoreCollections.USERS).document(partner_id).get()
+                        if partner_doc.exists:
+                            partner_user_data = partner_doc.to_dict()
+                            partner_name = partner_user_data.get("organization") or partner_user_data.get("full_name", partner_name)
+                            partner_names_cache[partner_id] = partner_name
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch partner name for {partner_id}: {e}")
+                else:
+                    partner_name = partner_names_cache[partner_id]
+
                 partner_data[partner_id] = {
                     "partner_id": partner_id,
-                    "partner_name": entry.get("partner_name", f"Partner {partner_id[-6:]}"), # ✅ Use real name if available
+                    "partner_name": partner_name,
                     "gross_volume": 0,
                     "bsw_sum": 0,
                     "temp_sum": 0,
