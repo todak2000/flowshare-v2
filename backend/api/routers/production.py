@@ -349,9 +349,9 @@ async def get_production_stats(
         return []
 
     # Get partner names
-    partners_ref = db.collection(FirestoreCollections.PARTNERS)
-    partners_query = await partners_ref.where("tenant_id", "==", tenant_id).get()
-    partner_names = {doc.id: doc.to_dict().get("name", "Unknown") for doc in partners_query}
+    partners_ref = db.collection(FirestoreCollections.USERS)
+    partners_query = await partners_ref.where("tenant_ids", "array_contains", tenant_id).get()
+    partner_names = {doc.id: doc.to_dict().get("organization", "Unknown") for doc in partners_query}
 
     # Build statistics
     stats: List[ProductionStats] = []
