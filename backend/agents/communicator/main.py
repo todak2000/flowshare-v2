@@ -3,18 +3,21 @@ import asyncio
 import json
 import logging
 import sys
-from concurrent import futures
+from datetime import datetime, timezone  # <-- Moved to top
+from google.cloud.firestore_v1 import AsyncClient, FieldFilter
+from google.cloud import pubsub_v1
+
+from concurrent import futures  # This is no longer strictly needed but OK
 
 sys.path.append("../..")
-
-from google.cloud import pubsub_v1
 from shared.config import settings
 from shared.database import get_firestore, FirestoreCollections
 from shared.email import (
     send_email,
     render_anomaly_alert_email,
     render_reconciliation_complete_email,
-    render_invitation_email
+    render_invitation_email,
+    render_entry_edited_email
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -25,28 +28,15 @@ async def handle_entry_flagged(entry_id: str, tenant_id: str, user_id: str, anom
     """
     Handle entry flagged event.
 
-    Sends anomaly alert email to user if they have email_anomaly_alerts enabled.
+    Sends anomaly alert email to field operator, partner, and coordinator.
+    Always includes admin (todak2000@gmail.com) in CC.
+    Field operator's email preferences are respected, but partner and coordinator always receive the alert.
     """
     try:
-        db = get_firestore()
+        # ✅ IMPROVEMENT: Use the shared get_firestore() client
+        db: AsyncClient = get_firestore()
 
-        # Get user
-        users_ref = db.collection(FirestoreCollections.USERS)
-        user_query = await users_ref.where("firebase_uid", "==", user_id).limit(1).get()
-
-        if not user_query:
-            logger.warning(f"User {user_id} not found")
-            return
-
-        user_data = user_query[0].to_dict()
-        notification_settings = user_data.get("notification_settings", {})
-
-        # Check if user wants anomaly alerts
-        if not notification_settings.get("email_anomaly_alerts", True):
-            logger.info(f"User {user_id} has anomaly alerts disabled")
-            return
-
-        # Get entry details
+        # Get entry details first
         entry_doc = await db.collection(FirestoreCollections.PRODUCTION_ENTRIES).document(entry_id).get()
         if not entry_doc.exists:
             logger.warning(f"Entry {entry_id} not found")
@@ -54,9 +44,65 @@ async def handle_entry_flagged(entry_id: str, tenant_id: str, user_id: str, anom
 
         entry_data = entry_doc.to_dict()
 
+        # Get user (field operator who submitted the entry)
+        users_ref = db.collection(FirestoreCollections.USERS)
+        user_query = await users_ref.where(filter=FieldFilter("firebase_uid", "==", user_id)).limit(1).get()
+
+        if not user_query:
+            logger.warning(f"User {user_id} not found")
+            return
+
+        user_data = user_query[0].to_dict()
+        user_email = user_data.get("email")
+        user_name = user_data.get('full_name', 'User')
+        notification_settings = user_data.get("notification_settings", {})
+
+        # Build recipient list: Always send to partner and coordinator
+        # Field operator is optional based on their settings
+        to_emails = []
+
+        # Get partner email (if entry has partner_id) - ALWAYS include
+        partner_id = entry_data.get('partner_id')
+        partner_email = None
+        if partner_id:
+            partner_doc = await users_ref.document(partner_id).get()
+            if partner_doc.exists:
+                partner_email = partner_doc.to_dict().get('email')
+                partner_name = partner_doc.to_dict().get('full_name', 'Partner')
+                if partner_email:
+                    to_emails.append(partner_email)
+                    logger.info(f"Adding partner {partner_email} to recipients")
+
+        # Get coordinator email (tenant owner) - ALWAYS include
+        tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
+        coordinator_email = None
+        if tenant_doc.exists:
+            tenant_data = tenant_doc.to_dict()
+            owner_id = tenant_data.get('owner_id')
+            if owner_id:
+                owner_doc = await users_ref.document(owner_id).get()
+                if owner_doc.exists:
+                    coordinator_email = owner_doc.to_dict().get('email')
+                    coordinator_name = owner_doc.to_dict().get('full_name', 'Coordinator')
+                    if coordinator_email:
+                        to_emails.append(coordinator_email)
+                        logger.info(f"Adding coordinator {coordinator_email} to recipients")
+
+        # Add field operator if they want alerts
+        if user_email and notification_settings.get("email_anomaly_alerts", True):
+            to_emails.append(user_email)
+            logger.info(f"Adding field operator {user_email} to recipients")
+        else:
+            logger.info(f"Field operator {user_email} has alerts disabled, skipping")
+
+        # If no recipients, skip email
+        if not to_emails:
+            logger.warning(f"No recipients for anomaly alert {entry_id}")
+            return
+
         # Render email using template
         html_body = render_anomaly_alert_email(
-            user_name=user_data.get('full_name', 'User'),
+            user_name=user_name,
             entry_id=entry_id,
             partner_id=entry_data.get('partner_id', 'N/A'),
             gross_volume=entry_data.get('gross_volume', 0),
@@ -64,18 +110,25 @@ async def handle_entry_flagged(entry_id: str, tenant_id: str, user_id: str, anom
             validation_notes=entry_data.get('validation_notes', ''),
         )
 
-        # Send email
+        # Send email to all recipients with admin in CC
         subject = "⚠️ FlowShare: Anomaly Detected in Production Data"
-        await send_email(
-            to_email=user_data.get("email"),
-            to_name=user_data.get('full_name', 'User'),
-            subject=subject,
-            html_body=html_body,
-        )
-        logger.info(f"Anomaly alert sent to {user_data.get('email')}")
+
+        # Send to each recipient individually to respect privacy
+        for recipient_email in to_emails:
+            await send_email(
+                to_email=recipient_email,
+                to_name=user_name,  # Generic name for all
+                subject=subject,
+                html_body=html_body,
+                cc_emails=["todak2000@gmail.com"],  # Always CC admin
+            )
+            logger.info(f"Anomaly alert sent to {recipient_email}")
+
+        logger.info(f"Anomaly alert sent to {len(to_emails)} recipients for entry {entry_id}")
 
     except Exception as e:
         logger.error(f"Error handling entry flagged event: {str(e)}")
+        raise  # ✅ IMPROVEMENT: Re-raise to be caught by callback
 
 
 async def handle_invitation_created(
@@ -88,7 +141,8 @@ async def handle_invitation_created(
     expires_at: str,
 ):
     try:
-        db = get_firestore()
+        # ✅ IMPROVEMENT: Use the shared get_firestore() client
+        db: AsyncClient = get_firestore()
 
         # Get tenant name
         tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
@@ -103,11 +157,12 @@ async def handle_invitation_created(
             inviter_name = inviter_data.get("full_name") or inviter_data.get("email") or "A colleague"
 
         # Format expiration date for email (e.g., "October 25, 2025 at 3:30 PM UTC")
-        from datetime import datetime, timezone
         try:
             expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
             formatted_expires = expires_dt.strftime("%B %d, %Y at %I:%M %p UTC")
-        except:
+        # ✅ IMPROVEMENT: Catch specific errors, not bare except:
+        except (ValueError, TypeError) as e: 
+            logger.warning(f"Could not parse expires_at date '{expires_at}': {e}")
             formatted_expires = expires_at  # fallback
 
         # Render email
@@ -130,7 +185,84 @@ async def handle_invitation_created(
 
     except Exception as e:
         logger.error(f"Error in handle_invitation_created: {str(e)}")
-        raise
+        raise  # ✅ IMPROVEMENT: Re-raise to be caught by callback
+
+async def handle_production_entry_edited(
+    entry_id: str,
+    tenant_id: str,
+    partner_id: str,
+    edited_by_user_id: str,
+    edit_reason: str,
+):
+    """
+    Handle production entry edited event.
+
+    Sends edit notification email to partner users.
+    """
+    try:
+        # ✅ IMPROVEMENT: Use the shared get_firestore() client
+        db: AsyncClient = get_firestore()
+
+        # Get editor details
+        users_ref = db.collection(FirestoreCollections.USERS)
+        editor_query = await users_ref.where(filter=FieldFilter("firebase_uid", "==", edited_by_user_id)).limit(1).get()
+
+        editor_name = "A coordinator"
+        if editor_query:
+            editor_data = editor_query[0].to_dict()
+            editor_name = editor_data.get("full_name") or editor_data.get("email") or "A coordinator"
+
+        # Get entry details
+        entry_doc = await db.collection(FirestoreCollections.PRODUCTION_ENTRIES).document(entry_id).get()
+        if not entry_doc.exists:
+            logger.warning(f"Entry {entry_id} not found")
+            return
+
+        entry_data = entry_doc.to_dict()
+
+        # Get all partner users for this partner
+        partner_users_query = await users_ref.where(filter=FieldFilter("partner_id", "==", partner_id)).get()
+
+        # Send email to each partner user
+        for user_doc in partner_users_query:
+            user_data = user_doc.to_dict()
+
+            # Skip if user is the editor
+            if user_data.get("firebase_uid") == edited_by_user_id:
+                continue
+            
+            # Skip if user doesn't have an email
+            user_email = user_data.get("email")
+            if not user_email:
+                continue
+
+            # Render email using template
+            html_body = render_entry_edited_email(
+                user_name=user_data.get('full_name', 'User'),
+                entry_id=entry_id,
+                editor_name=editor_name,
+                edit_reason=edit_reason,
+                measurement_date=str(entry_data.get('measurement_date', '')),
+                gross_volume=entry_data.get('gross_volume', 0),
+                bsw_percent=entry_data.get('bsw_percent', 0),
+                temperature=entry_data.get('temperature', 0),
+            )
+
+            # Send email
+            subject = "📝 FlowShare: Production Entry Updated - Approval Required"
+            await send_email(
+                to_email=user_email,
+                to_name=user_data.get('full_name', 'User'),
+                subject=subject,
+                html_body=html_body,
+            )
+            logger.info(f"Edit notification sent to {user_email}")
+
+    except Exception as e:
+        logger.error(f"Error handling production entry edited event: {str(e)}")
+        raise  # ✅ IMPROVEMENT: Re-raise to be caught by callback
+    # ❌ CRITICAL: Removed the `finally: await db.close()` block
+
 
 async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str):
     """
@@ -139,7 +271,8 @@ async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str)
     Sends reconciliation report to users who have email_reports enabled.
     """
     try:
-        db = get_firestore()
+        # ✅ IMPROVEMENT: Use the shared get_firestore() client
+        db: AsyncClient = get_firestore()
 
         # Get reconciliation
         reconciliation_doc = await db.collection(FirestoreCollections.RECONCILIATIONS).document(
@@ -161,10 +294,11 @@ async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str)
         for user_doc in users_query:
             user_data = user_doc.to_dict()
             notification_settings = user_data.get("notification_settings", {})
+            user_email = user_data.get("email")
 
-            # Check if user wants report emails
-            if not notification_settings.get("email_reports", True):
-                logger.info(f"User {user_data.get('email')} has report emails disabled")
+            # Check if user wants report emails and has an email
+            if not user_email or not notification_settings.get("email_reports", True):
+                logger.info(f"User {user_data.get('email')} has report emails disabled or no email")
                 continue
 
             # Determine if user is a partner (to show partner-specific view)
@@ -197,49 +331,43 @@ async def handle_reconciliation_complete(reconciliation_id: str, tenant_id: str)
             # Send email
             subject = "✅ FlowShare: Reconciliation Complete"
             await send_email(
-                to_email=user_data.get("email"),
+                to_email=user_email,
                 to_name=user_data.get('full_name', 'User'),
                 subject=subject,
                 html_body=html_body,
             )
-            logger.info(f"Reconciliation report sent to {user_data.get('email')}")
+            logger.info(f"Reconciliation report sent to {user_email}")
 
     except Exception as e:
         logger.error(f"Error handling reconciliation complete event: {str(e)}")
+        raise  # ✅ IMPROVEMENT: Re-raise to be caught by callback
 
 
-def callback(message: pubsub_v1.subscriber.message.Message):
-    """Callback for Pub/Sub messages."""
+# ✅ IMPROVEMENT: Renamed to `async_callback` and made `async`
+async def async_callback(message: pubsub_v1.subscriber.message.Message):
+    """Asynchronous callback to process Pub/Sub messages."""
     logger.info("✅ Received raw Pub/Sub message")
-    logger.info(f"Raw data: {message.data}")
     try:
         data = json.loads(message.data.decode("utf-8"))
         event_type = data.get("event_type")
         logger.info(f"Received message: {event_type}")
 
-        # Run async handler based on event type
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        if event_type == "entry_flagged":
-            loop.run_until_complete(
-                handle_entry_flagged(
+        # ✅ IMPROVEMENT: Await handlers directly, no asyncio.run()
+        try:
+            if event_type == "entry_flagged":
+                await handle_entry_flagged(
                     entry_id=data.get("entry_id"),
                     tenant_id=data.get("tenant_id"),
                     user_id=data.get("user_id"),
                     anomaly_score=data.get("anomaly_score", 0),
                 )
-            )
-        elif event_type == "reconciliation_complete":
-            loop.run_until_complete(
-                handle_reconciliation_complete(
+            elif event_type == "reconciliation_complete":
+                await handle_reconciliation_complete(
                     reconciliation_id=data.get("reconciliation_id"),
                     tenant_id=data.get("tenant_id"),
                 )
-            )
-        elif event_type == "invitation_created":
-            loop.run_until_complete(
-                handle_invitation_created(
+            elif event_type == "invitation_created":
+                await handle_invitation_created(
                     invitation_id=data["invitation_id"],
                     tenant_id=data["tenant_id"],
                     email=data["email"],
@@ -248,50 +376,96 @@ def callback(message: pubsub_v1.subscriber.message.Message):
                     role=data["role"],
                     expires_at=data["expires_at"],
                 )
-            )
-        else:
-            logger.warning(f"Unknown event type: {event_type}")
+            elif event_type == "production_entry_edited":
+                await handle_production_entry_edited(
+                    entry_id=data.get("entry_id"),
+                    tenant_id=data.get("tenant_id"),
+                    partner_id=data.get("partner_id"),
+                    edited_by_user_id=data.get("edited_by_user_id"),
+                    edit_reason=data.get("edit_reason", ""),
+                )
+            else:
+                logger.warning(f"Unknown event type: {event_type}")
 
-        loop.close()
-        message.ack()
+            # ✅ IMPROVEMENT: Ack only on success
+            message.ack()
+            logger.info(f"✅ Message acknowledged: {event_type}")
+
+        except Exception as handler_error:
+            # ✅ IMPROVEMENT: Nack on failure to allow retries
+            logger.error(f"❌ Error in handler for {event_type}: {str(handler_error)}", exc_info=True)
+            message.nack()
+            logger.warning(f"⚠️  Message nacked for retry: {event_type}")
 
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        message.nack()
+        # Critical error (e.g., JSON parsing)
+        logger.error(f"❌ Critical error processing message: {str(e)}", exc_info=True)
+        message.nack() # Nack here too, but it might go to dead-letter
 
-
-def main():
+# ✅ IMPROVEMENT: Renamed to `main_async` and made `async`
+async def main_async():
     """Start the Communicator Agent subscriber."""
     logger.info("Starting Communicator Agent...")
 
     subscriber = pubsub_v1.SubscriberClient()
 
-    # Subscribe to multiple topics
     topics = [
         settings.pubsub_entry_flagged_topic,
         settings.pubsub_reconciliation_complete_topic,
-        settings.pubsub_invitation_created_topic
+        settings.pubsub_invitation_created_topic,
+        settings.pubsub_entry_edited_topic
     ]
 
-    futures_list = []
+    subscription_paths = []
     for topic in topics:
-        subscription_path = subscriber.subscription_path(
+        if not topic:
+            continue
+        path = subscriber.subscription_path(
             settings.gcp_project_id, f"{topic}-sub"
         )
-        future = subscriber.subscribe(subscription_path, callback=callback)
-        logger.info(f"Listening for messages on {subscription_path}")
-        futures_list.append(future)
+        subscription_paths.append(path)
+        logger.info(f"Will listen for messages on {path}")
+    
+    # Get the running event loop
+    loop = asyncio.get_running_loop()
 
-    # Keep the subscriber running
-    with futures.ThreadPoolExecutor() as executor:
-        try:
-            for future in futures_list:
-                future.result()
-        except KeyboardInterrupt:
-            for future in futures_list:
-                future.cancel()
-            logger.info("Communicator Agent stopped")
+    # --- THIS IS THE NEW SYNCHRONOUS WRAPPER ---
+    def sync_callback(message: pubsub_v1.subscriber.message.Message):
+        """
+        Synchronous wrapper to schedule the async callback on the main event loop.
+        This function is called by the Pub/Sub background thread.
+        """
+        logger.debug(f"Sync callback received, scheduling {message.message_id} on main loop.")
+        
+        # Safely schedule the *real* async callback to run on the main loop
+        asyncio.run_coroutine_threadsafe(async_callback(message), loop)
+    # --- END OF NEW WRAPPER ---
+    
+    streaming_pull_futures = []
+    for subscription_path in subscription_paths:
+        # Subscribe using the *synchronous* wrapper
+        future = subscriber.subscribe(subscription_path, callback=sync_callback)
+        streaming_pull_futures.append(future)
+    
+    logger.info(f"Listening for messages on {len(subscription_paths)} subscriptions...")
+    
+    # Keep the script running
+    stop_event = asyncio.Event()
+    try:
+        await stop_event.wait()
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received, stopping...")
+        for future in streaming_pull_futures:
+            future.cancel()
+            future.result()
+        logger.info("Communicator Agent stopped")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in main_async: {e}", exc_info=True)
+        for future in streaming_pull_futures:
+            future.cancel()
+            future.result()
 
 
 if __name__ == "__main__":
-    main()
+    # ✅ IMPROVEMENT: Run the async main function
+    asyncio.run(main_async())

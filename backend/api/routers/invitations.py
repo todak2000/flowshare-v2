@@ -1,6 +1,7 @@
 """Team invitation routes."""
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timedelta, timezone
+from google.cloud import firestore
 import sys
 import uuid
 
@@ -9,7 +10,7 @@ sys.path.append("../..")
 from shared.auth import get_current_user_id
 from shared.database import get_firestore, FirestoreCollections
 from shared.models.invitation import Invitation, InvitationCreate, InvitationStatus
-from shared.models.user import NotificationSettings, UserRole
+from shared.models.user import NotificationSettings
 from shared.models.tenant import PLAN_LIMITS, SubscriptionPlan
 from shared.pubsub.publisher import publish_invitation_created
 from typing import List
@@ -29,6 +30,17 @@ async def create_invitation(
     """Create a new team invitation with partner limit validation."""
     db = get_firestore()
 
+    # Get current user to determine their role and set partner_id for field operators
+    users_ref = db.collection(FirestoreCollections.USERS)
+    user_query = await users_ref.where("firebase_uid", "==", user_id).limit(1).get()
+
+    if not user_query:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    current_user_doc = user_query[0]
+    current_user_data = current_user_doc.to_dict()
+    current_user_role = current_user_data.get("role")
+
     # Get tenant to check subscription plan and partner limits
     tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(invitation_data.tenant_id).get()
     if not tenant_doc.exists:
@@ -40,7 +52,6 @@ async def create_invitation(
     max_partners = plan_limits["max_partners"]
 
     # Count current partners + pending invitations
-    users_ref = db.collection(FirestoreCollections.USERS)
     current_partners_query = await users_ref.where("tenant_ids", "array_contains", invitation_data.tenant_id).get()
     current_partner_count = len(current_partners_query)
 
@@ -84,6 +95,12 @@ async def create_invitation(
         "expires_at": expires_at,
     }
 
+    # If inviter is a partner inviting a field operator, set the partner_id
+    if current_user_role == "partner" and invitation_data.role == "field_operator":
+        invitation_doc["partner_id"] = current_user_doc.id  # Set to the partner's user document ID
+        # Also set the partner_name from the partner's organization
+        invitation_doc["partner_name"] = current_user_data.get("organization", current_user_data.get("full_name"))
+
     await db.collection(FirestoreCollections.INVITATIONS).document(invitation_id).set(invitation_doc)
 
     # TODO: Send invitation email via Communicator Agent
@@ -112,14 +129,19 @@ async def list_invitations(
     tenant_id: str,
     user_id: str = Depends(get_current_user_id),
 ):
-    """List all invitations for a tenant."""
+    """List all invitations for a tenant. Only returns pending invitations.
+    All users only see invitations they created."""
     db = get_firestore()
+
     invitations_ref = db.collection(FirestoreCollections.INVITATIONS)
 
-    invitations_query = await invitations_ref.where("tenant_id", "==", tenant_id).get()
+    # All users (coordinators, partners, etc.) only see pending invitations they created
+    invitations_query = invitations_ref.where("tenant_id", "==", tenant_id).where("status", "==", InvitationStatus.PENDING.value).where("invited_by", "==", user_id)
+
+    invitations_docs = await invitations_query.get()
 
     invitations = []
-    for doc in invitations_query:
+    for doc in invitations_docs:
         invitations.append(Invitation(id=doc.id, **doc.to_dict()))
 
     return invitations
@@ -127,14 +149,22 @@ async def list_invitations(
 
 @router.get("/{invitation_id}", response_model=Invitation)
 async def get_invitation(invitation_id: str):
-    """Get invitation by ID."""
+    """Get invitation by ID (public endpoint for invitation acceptance page)."""
     db = get_firestore()
     invitation_doc = await db.collection(FirestoreCollections.INVITATIONS).document(invitation_id).get()
 
     if not invitation_doc.exists:
         raise HTTPException(status_code=404, detail="Invitation not found")
 
-    return Invitation(id=invitation_doc.id, **invitation_doc.to_dict())
+    invitation_data = invitation_doc.to_dict()
+
+    # Fetch tenant name for display
+    tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(invitation_data["tenant_id"]).get()
+    if tenant_doc.exists:
+        tenant_data = tenant_doc.to_dict()
+        invitation_data["tenant_name"] = tenant_data.get("name")
+
+    return Invitation(id=invitation_doc.id, **invitation_data)
 
 
 @router.post("/{invitation_id}/accept", response_model=Invitation)
@@ -169,16 +199,67 @@ async def accept_invitation(
 
     if user_query:
         user_doc_ref = user_query[0].reference
-        user_data = user_query[0].to_dict()
+        user_doc = user_query[0]
+        user_data = user_doc.to_dict()
         tenant_ids = user_data.get("tenant_ids", [])
+
         if invitation_data["tenant_id"] not in tenant_ids:
             tenant_ids.append(invitation_data["tenant_id"])
-            await user_doc_ref.update({
+
+            # Determine partner_id and organization based on role
+            role = invitation_data["role"]
+            partner_id = None
+            organization = invitation_data.get("partner_name")  # Company name from invitation
+
+            if role == "partner":
+                # Partners: their partner_id is their own user_id
+                partner_id = user_doc.id
+            elif role == "field_operator":
+                # Field operators: partner_id from invitation
+                partner_id = invitation_data.get("partner_id")
+
+            update_data = {
                 "tenant_ids": tenant_ids,
-                "role": invitation_data["role"],
-                "partner_id": invitation_data.get("partner_id"),
+                "role": role,
+                "partner_id": partner_id,
+                "organization": organization,
                 "notification_settings": invitation_data.get("notification_settings", NotificationSettings().model_dump()),
-            })
+            }
+
+            # Add field_operator_ids array for partners
+            if role == "partner":
+                update_data["field_operator_ids"] = []
+
+            await user_doc_ref.update(update_data)
+
+            # Update tenant document with new partner or field operator
+            tenant_ref = db.collection(FirestoreCollections.TENANTS).document(invitation_data["tenant_id"])
+            now = datetime.now(timezone.utc)
+
+            if role == "partner":
+                # Add partner ID to tenant's partner_ids array
+                await tenant_ref.update({
+                    "partner_ids": firestore.ArrayUnion([user_doc.id]),
+                    "updated_at": now,
+                })
+                print(f"✅ Added partner {user_doc.id} to tenant partner_ids")
+
+            elif role == "field_operator":
+                # Add field operator ID to tenant's field_operator_ids array
+                await tenant_ref.update({
+                    "field_operator_ids": firestore.ArrayUnion([user_doc.id]),
+                    "updated_at": now,
+                })
+                print(f"✅ Added field operator {user_doc.id} to tenant field_operator_ids")
+
+                # Also add to the partner's field_operator_ids array
+                if partner_id:
+                    partner_ref = db.collection(FirestoreCollections.USERS).document(partner_id)
+                    await partner_ref.update({
+                        "field_operator_ids": firestore.ArrayUnion([user_doc.id]),
+                        "updated_at": now,
+                    })
+                    print(f"✅ Added field operator {user_doc.id} to partner {partner_id} field_operator_ids")
 
     # Return updated invitation
     updated_doc = await invitation_ref.get()

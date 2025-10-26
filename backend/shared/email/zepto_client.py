@@ -15,6 +15,7 @@ async def send_email(
     subject: str,
     html_body: str,
     reply_to: Optional[str] = None,
+    cc_emails: Optional[list[str]] = None,
 ) -> bool:
     """
     Send email using ZeptoMail API.
@@ -25,6 +26,7 @@ async def send_email(
         subject: Email subject
         html_body: HTML email body
         reply_to: Optional reply-to address
+        cc_emails: Optional list of CC email addresses
 
     Returns:
         True if email sent successfully, False otherwise
@@ -61,6 +63,13 @@ async def send_email(
 
         if reply_to:
             payload["reply_to"] = [{"address": reply_to}]
+
+        if cc_emails:
+            payload["cc"] = [
+                {"email_address": {"address": cc_email}}
+                for cc_email in cc_emails
+                if cc_email  # Filter out None or empty strings
+            ]
 
         async with httpx.AsyncClient() as client:
             response = await client.post(

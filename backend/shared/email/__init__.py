@@ -4,6 +4,7 @@ from .templates import (
     render_anomaly_alert_email,
     render_reconciliation_complete_email,
     render_invitation_email,
+    render_entry_edited_email,
 )
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "render_anomaly_alert_email",
     "render_reconciliation_complete_email",
     "render_invitation_email",
+    "render_entry_edited_email",
 ]

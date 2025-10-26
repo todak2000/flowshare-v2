@@ -42,6 +42,7 @@ class Invitation(InvitationBase):
     created_at: datetime
     updated_at: datetime
     expires_at: datetime
+    tenant_name: Optional[str] = None  # Populated when fetching for public view
 
     class Config:
         from_attributes = True

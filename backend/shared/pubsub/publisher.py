@@ -47,16 +47,27 @@ async def publish_message(topic_name: str, data: Dict[str, Any], **attributes) -
         raise
 
 
-async def publish_production_entry_created(entry_id: str, tenant_id: str, partner_id: str):
-    """Publish production entry created event."""
+async def publish_production_entry_created(
+    entry_id: str,
+    tenant_id: str,
+    partner_id: str,
+    entry_data: Optional[Dict[str, Any]] = None
+):
+    """Publish production entry created event with full entry data for auditor analysis."""
+    message_data = {
+        "entry_id": entry_id,
+        "tenant_id": tenant_id,
+        "partner_id": partner_id,
+        "event_type": "production_entry_created",
+    }
+
+    # Include full entry data if provided (for auditor agent)
+    if entry_data:
+        message_data["entry_data"] = entry_data
+
     await publish_message(
         settings.pubsub_production_entry_topic,
-        {
-            "entry_id": entry_id,
-            "tenant_id": tenant_id,
-            "partner_id": partner_id,
-            "event_type": "production_entry_created",
-        },
+        message_data,
     )
 
 
@@ -72,17 +83,30 @@ async def publish_reconciliation_triggered(reconciliation_id: str, tenant_id: st
     )
 
 
-async def publish_entry_flagged(entry_id: str, tenant_id: str, user_id: str, anomaly_score: float):
-    """Publish entry flagged event."""
+async def publish_entry_flagged(
+    entry_id: str,
+    tenant_id: str,
+    anomaly_score: float,
+    flags: Optional[list] = None,
+    user_id: Optional[str] = None
+):
+    """Publish entry flagged event with anomaly details."""
+    message_data = {
+        "entry_id": entry_id,
+        "tenant_id": tenant_id,
+        "anomaly_score": anomaly_score,
+        "event_type": "entry_flagged",
+    }
+
+    if flags:
+        message_data["flags"] = flags
+
+    if user_id:
+        message_data["user_id"] = user_id
+
     await publish_message(
         settings.pubsub_entry_flagged_topic,
-        {
-            "entry_id": entry_id,
-            "tenant_id": tenant_id,
-            "user_id": user_id,
-            "anomaly_score": anomaly_score,
-            "event_type": "entry_flagged",
-        },
+        message_data,
     )
 
 
@@ -118,5 +142,26 @@ async def publish_invitation_created(
             "invited_by_user_id": invited_by_user_id,
             "role": role,
             "expires_at": expires_at,
+        },
+    )
+
+
+async def publish_production_entry_edited(
+    entry_id: str,
+    tenant_id: str,
+    partner_id: str,
+    edited_by_user_id: str,
+    edit_reason: str,
+):
+    """Publish production entry edited event for partner notification."""
+    await publish_message(
+        settings.pubsub_entry_edited_topic,
+        {
+            "event_type": "production_entry_edited",
+            "entry_id": entry_id,
+            "tenant_id": tenant_id,
+            "partner_id": partner_id,
+            "edited_by_user_id": edited_by_user_id,
+            "edit_reason": edit_reason,
         },
     )

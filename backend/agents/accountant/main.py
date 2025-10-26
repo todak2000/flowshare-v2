@@ -3,8 +3,7 @@ import asyncio
 import json
 import logging
 import sys
-from concurrent import futures
-from datetime import datetime
+from datetime import datetime, timezone  # ✅ Import timezone
 from typing import List
 
 sys.path.append("../..")
@@ -33,14 +32,15 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
     5. Save results
     6. Publish completion event
     """
+    # ✅ Define db and ref here to be available in try/except
+    db = get_firestore()
+    reconciliations_ref = db.collection(FirestoreCollections.RECONCILIATIONS)
     try:
-        db = get_firestore()
-        reconciliations_ref = db.collection(FirestoreCollections.RECONCILIATIONS)
         reconciliation_doc = await reconciliations_ref.document(reconciliation_id).get()
 
         if not reconciliation_doc.exists:
             logger.error(f"Reconciliation {reconciliation_id} not found")
-            return
+            return  # This is not an error to retry, so we don't raise
 
         reconciliation_data = reconciliation_doc.to_dict()
 
@@ -52,6 +52,7 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
         # Get tenant settings
         tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
         if not tenant_doc.exists:
+            # This is a fatal error for this run
             raise Exception(f"Tenant {tenant_id} not found")
 
         tenant_data = tenant_doc.to_dict()
@@ -60,29 +61,74 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
 
         logger.info(f"Using allocation model: {allocation_model}")
 
-        # Fetch production entries for the period
+        # Fetch ALL production entries for the period to check approval percentage
         entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
-        entries_query = await entries_ref.where("tenant_id", "==", tenant_id).where(
-            "status", "==", ProductionEntryStatus.VALIDATED.value
+        all_entries_query = await entries_ref.where("tenant_id", "==", tenant_id).where(
+            "measurement_date", ">=", reconciliation_data["period_start"]
+        ).where(
+            "measurement_date", "<=", reconciliation_data["period_end"]
+        ).get()
+
+        total_entries_count = len(all_entries_query)
+
+        # Check if there are any entries at all
+        if total_entries_count == 0:
+            logger.warning(f"No production entries found for period. Marking as failed.")
+            await reconciliations_ref.document(reconciliation_id).update({
+                "status": ReconciliationStatus.FAILED.value,
+                "error_message": "No production entries found for the period.",
+            })
+            return
+
+        # Fetch APPROVED production entries for the period
+        approved_entries_query = await entries_ref.where("tenant_id", "==", tenant_id).where(
+            "status", "==", ProductionEntryStatus.APPROVED.value
         ).where(
             "measurement_date", ">=", reconciliation_data["period_start"]
         ).where(
             "measurement_date", "<=", reconciliation_data["period_end"]
         ).get()
 
-        if len(entries_query) == 0:
-            raise Exception("No validated production entries found for the period")
+        approved_entries_count = len(approved_entries_query)
+
+        # Calculate approval percentage
+        approval_percentage = (approved_entries_count / total_entries_count) * 100 if total_entries_count > 0 else 0
+
+        logger.info(f"Reconciliation {reconciliation_id}: {approved_entries_count}/{total_entries_count} entries approved ({approval_percentage:.1f}%)")
+
+        # Check if at least 90% of entries are approved
+        if approval_percentage < 90.0:
+            error_msg = (
+                f"Insufficient approved production data for reconciliation. "
+                f"Only {approved_entries_count} out of {total_entries_count} entries ({approval_percentage:.1f}%) are approved. "
+                f"At least 90% of production data must be approved before reconciliation can proceed."
+            )
+            logger.warning(f"Reconciliation {reconciliation_id} failed: {error_msg}")
+            await reconciliations_ref.document(reconciliation_id).update({
+                "status": ReconciliationStatus.FAILED.value,
+                "error_message": error_msg,
+            })
+            return
+
+        if approved_entries_count == 0:
+            # This is not an error, but a valid state. Update status and return.
+            logger.warning(f"No approved production entries found for {reconciliation_id}. Marking as failed.")
+            await reconciliations_ref.document(reconciliation_id).update({
+                "status": ReconciliationStatus.FAILED.value,
+                "error_message": "No approved production entries found for the period.",
+            })
+            return # Don't raise, no retry needed.
 
         # Group entries by partner and sum volumes
         partner_data = {}
-        for doc in entries_query:
+        for doc in approved_entries_query:
             entry = doc.to_dict()
             partner_id = entry["partner_id"]
 
             if partner_id not in partner_data:
                 partner_data[partner_id] = {
                     "partner_id": partner_id,
-                    "partner_name": f"Partner {partner_id[-8:]}",  # Simplified partner name
+                    "partner_name": entry.get("partner_name", f"Partner {partner_id[-6:]}"), # ✅ Use real name if available
                     "gross_volume": 0,
                     "bsw_sum": 0,
                     "temp_sum": 0,
@@ -162,7 +208,7 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
         await reconciliations_ref.document(reconciliation_id).update({
             "status": ReconciliationStatus.COMPLETED.value,
             "result": reconciliation_result.model_dump(),
-            "completed_at": datetime.utcnow(),
+            "completed_at": datetime.now(timezone.utc), # ✅ Use timezone-aware datetime
         })
 
         logger.info(f"Reconciliation {reconciliation_id} completed successfully")
@@ -171,18 +217,25 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
         await publish_reconciliation_complete(reconciliation_id, tenant_id)
 
     except Exception as e:
-        logger.error(f"Error in reconciliation {reconciliation_id}: {str(e)}")
+        logger.error(f"Error in reconciliation {reconciliation_id}: {str(e)}", exc_info=True)
+        try:
+            # Update status to FAILED
+            await reconciliations_ref.document(reconciliation_id).update({
+                "status": ReconciliationStatus.FAILED.value,
+                "error_message": str(e),
+            })
+        except Exception as update_e:
+            # Log if we can't even update the status
+            logger.error(f"CRITICAL: Failed to update status to FAILED for {reconciliation_id}: {update_e}")
 
-        # Update status to FAILED
-        db = get_firestore()
-        await db.collection(FirestoreCollections.RECONCILIATIONS).document(reconciliation_id).update({
-            "status": ReconciliationStatus.FAILED.value,
-            "error_message": str(e),
-        })
+        # ✅ CRITICAL: Re-raise the exception so the callback will nack() it
+        raise e
 
 
-def callback(message: pubsub_v1.subscriber.message.Message):
-    """Callback for Pub/Sub messages."""
+# ✅ Renamed to async_callback and made async
+async def async_callback(message: pubsub_v1.subscriber.message.Message):
+    """Async callback for Pub/Sub messages."""
+    reconciliation_id = None
     try:
         data = json.loads(message.data.decode("utf-8"))
         logger.info(f"Received message: {data}")
@@ -191,44 +244,68 @@ def callback(message: pubsub_v1.subscriber.message.Message):
         tenant_id = data.get("tenant_id")
 
         if not all([reconciliation_id, tenant_id]):
-            logger.error("Missing required fields in message")
-            message.ack()
+            logger.error("Missing required fields in message, acking.")
+            message.ack() # Can't retry this
             return
 
-        # Run async reconciliation
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(perform_reconciliation(reconciliation_id, tenant_id))
-        loop.close()
+        # ✅ Run async reconciliation directly
+        await perform_reconciliation(reconciliation_id, tenant_id)
 
+        # ✅ Ack on success
         message.ack()
-        logger.info(f"Message processed: {reconciliation_id}")
+        logger.info(f"Message processed and acked: {reconciliation_id}")
 
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
+        # ✅ Nack on failure for retry
+        logger.error(f"Error processing message {reconciliation_id}: {str(e)}", exc_info=True)
         message.nack()
+        logger.warning(f"Message nacked for retry: {reconciliation_id}")
 
 
-def main():
+# ✅ Renamed to main_async and made async
+async def main_async():
     """Start the Accountant Agent subscriber."""
-    logger.info("Starting Accountant Agent...")
+    logger.info("Starting Accountant Agent (async)...")
 
     subscriber = pubsub_v1.SubscriberClient()
     subscription_path = subscriber.subscription_path(
         settings.gcp_project_id, f"{settings.pubsub_reconciliation_trigger_topic}-sub"
     )
 
-    streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+    # Get the running event loop
+    loop = asyncio.get_running_loop()
+
+    # --- THIS IS THE NEW SYNCHRONOUS WRAPPER ---
+    def sync_callback(message: pubsub_v1.subscriber.message.Message):
+        """
+        Synchronous wrapper to schedule the async callback on the main event loop.
+        This function is called by the Pub/Sub background thread.
+        """
+        logger.debug(f"Sync callback received, scheduling {message.message_id} on main loop.")
+        
+        # Safely schedule the *real* async callback to run on the main loop
+        asyncio.run_coroutine_threadsafe(async_callback(message), loop)
+    # --- END OF NEW WRAPPER ---
+
+    # Subscribe using the *synchronous* wrapper
+    streaming_pull_future = subscriber.subscribe(subscription_path, callback=sync_callback)
     logger.info(f"Listening for messages on {subscription_path}")
 
-    # Keep the subscriber running
-    with futures.ThreadPoolExecutor() as executor:
-        try:
-            streaming_pull_future.result()
-        except KeyboardInterrupt:
-            streaming_pull_future.cancel()
-            logger.info("Accountant Agent stopped")
+    # Keep the script alive
+    stop_event = asyncio.Event()
+    try:
+        await stop_event.wait()
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received, stopping...")
+        streaming_pull_future.cancel()
+        streaming_pull_future.result()
+        logger.info("Accountant Agent stopped")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in main_async: {e}", exc_info=True)
+        streaming_pull_future.cancel()
+        streaming_pull_future.result()
 
 
 if __name__ == "__main__":
-    main()
+    # ✅ Run the async main function
+    asyncio.run(main_async())

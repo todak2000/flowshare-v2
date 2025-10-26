@@ -1,5 +1,5 @@
 """Production entry models."""
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -8,9 +8,11 @@ from pydantic import BaseModel, Field
 class ProductionEntryStatus(str, Enum):
     """Production entry validation status."""
 
-    PENDING = "pending"
-    VALIDATED = "validated"
-    FLAGGED = "flagged"
+    PENDING = "pending"  # Waiting for AI validation
+    APPROVED = "approved"  # AI validated, no anomalies
+    FLAGGED = "flagged"  # AI detected anomalies
+    PENDING_APPROVAL = "pending_approval"  # Edited by coordinator, awaiting partner approval
+    REJECTED = "rejected"  # Rejected by partner or coordinator
 
 
 class ProductionEntryBase(BaseModel):
@@ -30,7 +32,21 @@ class ProductionEntryCreate(ProductionEntryBase):
     """Production entry creation model."""
 
     tenant_id: str
-    submitted_by: str
+
+
+class ProductionEntryUpdate(BaseModel):
+    """Production entry update model."""
+
+    measurement_date: Optional[datetime] = None
+    gross_volume: Optional[float] = Field(None, gt=0)
+    bsw_percent: Optional[float] = Field(None, ge=0, le=100)
+    temperature: Optional[float] = Field(None, gt=0)
+    api_gravity: Optional[float] = Field(None, gt=0)
+    pressure: Optional[float] = Field(None, gt=0)
+    meter_factor: Optional[float] = None
+    status: Optional[ProductionEntryStatus] = None
+    validation_notes: Optional[str] = None
+    edit_reason: Optional[str] = None  # Reason for edit (required for coordinator edits)
 
 
 class ProductionEntry(ProductionEntryBase):
@@ -44,6 +60,21 @@ class ProductionEntry(ProductionEntryBase):
     anomaly_score: Optional[float] = None
     created_at: datetime
     updated_at: datetime
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    edited_by: Optional[str] = None  # User who edited the entry
+    edited_at: Optional[datetime] = None
+    edit_reason: Optional[str] = None  # Reason for edit
 
     class Config:
         from_attributes = True
+
+
+class ProductionStats(BaseModel):
+    """Production statistics for a partner."""
+
+    partner_id: str
+    partner_name: str
+    total_volume: float
+    percentage: float
+    entry_count: int

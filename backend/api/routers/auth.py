@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
+from google.cloud import firestore
 import sys
 import os
 import uuid
@@ -25,6 +26,13 @@ class RegisterRequest(BaseModel):
     role: str = "coordinator"
     subscription_plan: str = "starter"
     payment_data: Optional[Dict[str, Any]] = None
+
+
+class RegisterInviteeRequest(BaseModel):
+    """Invitee registration request payload."""
+    full_name: str
+    phone_number: str
+    invitation_id: str
 
 
 @router.post("/register", response_model=Dict[str, Any])
@@ -83,6 +91,8 @@ async def register_user(
         **tenant_data.model_dump(),
         "settings": TenantSettings().model_dump(),
         "status": "active",
+        "partner_ids": [],  # Track all partner user IDs
+        "field_operator_ids": [],  # Track all field operator user IDs
         "created_at": now,
         "updated_at": now,
     }
@@ -127,6 +137,7 @@ async def register_user(
 
     user_doc = {
         **user_data.model_dump(),
+        "organization": request.tenant_name,  # Store tenant/company name as organization
         "created_at": now,
         "updated_at": now,
     }
@@ -161,11 +172,157 @@ async def register_user(
     }
 
 
+@router.post("/register-invitee", response_model=Dict[str, Any])
+async def register_invitee(
+    request: RegisterInviteeRequest = Body(...),
+    firebase_uid: str = Depends(get_current_user_id),
+    email: str = Depends(get_current_user_email),
+):
+    """
+    Register a new user as an invitee (partner, field operator, auditor).
+    This is called after the user accepts an invitation and completes Firebase authentication.
+    No payment required, no tenant creation. User joins existing tenant.
+    """
+    db = get_firestore()
+
+    # Check if user already exists
+    users_ref = db.collection(FirestoreCollections.USERS)
+    existing_user = await users_ref.where("firebase_uid", "==", firebase_uid).limit(1).get()
+
+    if len(existing_user) > 0:
+        raise HTTPException(status_code=400, detail="User already registered")
+
+    # Get invitation
+    invitation_ref = db.collection(FirestoreCollections.INVITATIONS).document(request.invitation_id)
+    invitation_doc = await invitation_ref.get()
+
+    if not invitation_doc.exists:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    invitation_data = invitation_doc.to_dict()
+
+    # Verify invitation status
+    if invitation_data["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Invitation is not pending")
+
+    # Verify email matches
+    if invitation_data["email"] != email:
+        raise HTTPException(status_code=400, detail="Email does not match invitation")
+
+    # Check if expired
+    if invitation_data["expires_at"] < datetime.now(timezone.utc):
+        await invitation_ref.update({"status": "expired"})
+        raise HTTPException(status_code=400, detail="Invitation has expired")
+
+    # Create new user
+    user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+
+    # Determine partner_id and organization based on role
+    role = UserRole(invitation_data["role"])
+    partner_id = None
+    organization = invitation_data.get("partner_name")  # Company name from invitation
+
+    if role == UserRole.PARTNER:
+        # Partners: their partner_id is their own user_id (they ARE the partner)
+        partner_id = user_id
+        # Organization is the company name provided in invitation
+    elif role == UserRole.FIELD_OPERATOR:
+        # Field operators: partner_id is from invitation (the partner who invited them)
+        partner_id = invitation_data.get("partner_id")
+        # Organization is inherited from their partner
+
+    user_data = UserCreate(
+        email=email,
+        full_name=request.full_name,
+        phone_number=request.phone_number,
+        firebase_uid=firebase_uid,
+        role=role,
+        tenant_ids=[invitation_data["tenant_id"]],
+        partner_id=partner_id
+    )
+
+    user_doc = {
+        **user_data.model_dump(),
+        "organization": organization,  # Store company/organization name
+        "notification_settings": invitation_data.get("notification_settings", {}),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Add field_operator_ids array for partners
+    if role == UserRole.PARTNER:
+        user_doc["field_operator_ids"] = []  # Track field operators for this partner
+
+    print(f"📝 Creating invitee user in Firestore:")
+    print(f"   User ID: {user_id}")
+    print(f"   Email: {email}")
+    print(f"   Role: {invitation_data['role']}")
+    print(f"   Partner ID: {partner_id}")
+    print(f"   Organization: {organization}")
+    print(f"   Tenant ID: {invitation_data['tenant_id']}")
+
+    try:
+        await users_ref.document(user_id).set(user_doc)
+        print(f"✅ Invitee user created successfully")
+
+        # Update invitation status to accepted
+        await invitation_ref.update({
+            "status": "accepted",
+            "updated_at": now,
+        })
+        print(f"✅ Invitation marked as accepted")
+
+        # Update tenant document with new partner or field operator
+        tenant_ref = db.collection(FirestoreCollections.TENANTS).document(invitation_data["tenant_id"])
+
+        if role == UserRole.PARTNER:
+            # Add partner ID to tenant's partner_ids array
+            await tenant_ref.update({
+                "partner_ids": firestore.ArrayUnion([user_id]),
+                "updated_at": now,
+            })
+            print(f"✅ Added partner {user_id} to tenant partner_ids")
+
+        elif role == UserRole.FIELD_OPERATOR:
+            # Add field operator ID to tenant's field_operator_ids array
+            await tenant_ref.update({
+                "field_operator_ids": firestore.ArrayUnion([user_id]),
+                "updated_at": now,
+            })
+            print(f"✅ Added field operator {user_id} to tenant field_operator_ids")
+
+            # Also add to the partner's field_operator_ids array
+            if partner_id:
+                partner_ref = users_ref.document(partner_id)
+                await partner_ref.update({
+                    "field_operator_ids": firestore.ArrayUnion([user_id]),
+                    "updated_at": now,
+                })
+                print(f"✅ Added field operator {user_id} to partner {partner_id} field_operator_ids")
+
+        # Get tenant info
+        tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(invitation_data["tenant_id"]).get()
+        tenant_data = None
+        if tenant_doc.exists:
+            tenant_data = Tenant(id=tenant_doc.id, **tenant_doc.to_dict())
+
+        created_user = User(id=user_id, **user_doc)
+
+        return {
+            "user": created_user.model_dump(),
+            "tenant": tenant_data.model_dump() if tenant_data else None
+        }
+    except Exception as e:
+        print(f"❌ ERROR creating invitee user: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to register invitee: {str(e)}")
+
+
 @router.get("/me", response_model=User)
 async def get_current_user(
     firebase_uid: str = Depends(get_current_user_id),
 ):
-    """Get current authenticated user."""
+    """Get current authenticated user and update last login timestamp."""
     db = get_firestore()
     users_ref = db.collection(FirestoreCollections.USERS)
 
@@ -175,5 +332,17 @@ async def get_current_user(
     if len(users) == 0:
         raise HTTPException(status_code=404, detail="User not found")
 
+    user_doc_ref = users[0].reference
     user_data = users[0].to_dict()
+
+    # Update last login timestamp
+    now = datetime.now(timezone.utc)
+    await user_doc_ref.update({
+        "last_login_at": now,
+        "updated_at": now,
+    })
+
+    # Add last_login_at to response
+    user_data["last_login_at"] = now
+
     return User(id=users[0].id, **user_data)

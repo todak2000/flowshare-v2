@@ -17,6 +17,7 @@ from routers import (
     invitations,
     production,
     reconciliation,
+    terminal_receipts,
     analytics,
     forecasts,
     partners
@@ -59,6 +60,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+print(settings.cors_origins_list, 'settings.cors_origins_listgfhjkljhg')
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -87,6 +89,7 @@ app.include_router(tenants.router, prefix="/api/tenants", tags=["Tenants"])
 app.include_router(invitations.router, prefix="/api/invitations", tags=["Invitations"])
 app.include_router(production.router, prefix="/api/production", tags=["Production"])
 app.include_router(reconciliation.router, prefix="/api/reconciliation", tags=["Reconciliation"])
+app.include_router(terminal_receipts.router, prefix="/api/terminal-receipts", tags=["Terminal Receipts"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
 app.include_router(partners.router, prefix="/api/partners", tags=["Partners"])

@@ -1,6 +1,8 @@
 """Email template rendering with header/footer wrapper."""
-from typing import Dict, Any
 from ..config import settings
+
+# Get app URL from settings
+APP_URL = settings.app_url
 
 
 def _wrap_in_layout(body_content: str) -> str:
@@ -137,8 +139,8 @@ def _wrap_in_layout(body_content: str) -> str:
             <p><strong>FlowShare V2</strong> - AI-Powered Hydrocarbon Allocation Platform</p>
             <p>This is an automated message. Please do not reply to this email.</p>
             <p>
-                <a href="https://flowshare-v2.web.app" style="color: #2563eb; text-decoration: none;">Visit Dashboard</a> |
-                <a href="https://flowshare-v2.web.app/help" style="color: #2563eb; text-decoration: none;">Help Center</a>
+                <a href="{APP_URL}" style="color: #2563eb; text-decoration: none;">Visit Dashboard</a> |
+                <a href="{APP_URL}/help" style="color: #2563eb; text-decoration: none;">Help Center</a>
             </p>
             <p style="margin-top: 20px; font-size: 11px; color: #9ca3af;">
                 &copy; 2025 FlowShare V2. All rights reserved.
@@ -220,7 +222,7 @@ def render_anomaly_alert_email(
             <li>Contact support if you need assistance</li>
         </ol>
 
-        <a href="https://flowshare-v2.web.app/dashboard/production/{entry_id}" class="button">
+        <a href="{APP_URL}/dashboard/production/{entry_id}" class="button">
             Review Entry Now
         </a>
 
@@ -360,7 +362,7 @@ def render_reconciliation_complete_email(
             <li>Share results with stakeholders</li>
         </ul>
 
-        <a href="https://flowshare-v2.web.app/dashboard/reconciliation/{reconciliation_id}" class="button">
+        <a href="{APP_URL}/dashboard/reconciliation/{reconciliation_id}" class="button">
             View Detailed Results
         </a>
 
@@ -372,72 +374,96 @@ def render_reconciliation_complete_email(
     return _wrap_in_layout(body)
 
 
-def render_invitation_email(
-    invitee_name: str,
-    inviter_name: str,
-    tenant_name: str,
-    role: str,
-    invitation_id: str,
-    expires_at: str,
+def render_entry_edited_email(
+    user_name: str,
+    entry_id: str,
+    editor_name: str,
+    edit_reason: str,
+    measurement_date: str,
+    gross_volume: float,
+    bsw_percent: float,
+    temperature: float,
 ) -> str:
     """
-    Render team invitation email (without header/footer).
+    Render production entry edited email.
 
     Args:
-        invitee_name: Invitee's name
-        inviter_name: Inviter's name
-        tenant_name: Tenant/company name
-        role: User role being assigned
-        invitation_id: Invitation ID
-        expires_at: Invitation expiration date
+        user_name: User's full name
+        entry_id: Production entry ID
+        editor_name: Name of coordinator who edited
+        edit_reason: Reason for edit
+        measurement_date: Measurement date
+        gross_volume: Gross volume value
+        bsw_percent: BSW percentage
+        temperature: Temperature value
 
     Returns:
         Complete HTML email
     """
-    role_display = role.replace('_', ' ').title()
-
     body = f"""
-        <h1>🤝 You've Been Invited to FlowShare V2</h1>
+        <h1>📝 Production Entry Updated - Approval Required</h1>
 
-        <p>Hello <strong>{invitee_name}</strong>,</p>
+        <p>Hello <strong>{user_name}</strong>,</p>
 
-        <p><strong>{inviter_name}</strong> has invited you to join <strong>{tenant_name}</strong> on FlowShare V2 as a <strong>{role_display}</strong>.</p>
+        <p>A production entry for your organization has been updated by <strong>{editor_name}</strong>.</p>
 
-        <div class="success-box">
-            <strong>Invitation Details</strong><br>
-            Organization: {tenant_name}<br>
-            Role: {role_display}<br>
-            Invited by: {inviter_name}
+        <div class="alert-box">
+            <strong>Approval Required</strong><br>
+            Please review and approve this change before it can be used in reconciliation.
         </div>
 
-        <h2>About FlowShare V2</h2>
-        <p>FlowShare V2 is an AI-powered hydrocarbon allocation platform that automates joint venture reconciliation, reducing the process from weeks to minutes while maintaining production-grade accuracy.</p>
+        <h2>Edit Reason</h2>
+        <p><em>{edit_reason}</em></p>
 
-        <h2>Your Role: {role_display}</h2>
-        <p>As a {role_display}, you will be able to:</p>
-        <ul>
-            <li>Submit and manage production data</li>
-            <li>View reconciliation results</li>
-            <li>Access analytics and reports</li>
-            <li>Collaborate with team members</li>
-        </ul>
-
-        <a href="https://flowshare-v2.web.app/invitations/{invitation_id}/accept" class="button">
-            Accept Invitation
-        </a>
-
-        <p style="margin-top: 30px; font-size: 14px; color: #dc2626;">
-            <strong>⏰ This invitation expires on {expires_at}</strong>
-        </p>
+        <h2>Updated Entry Details</h2>
+        <table class="data-table">
+            <tr>
+                <th>Field</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Entry ID</td>
+                <td><code>{entry_id}</code></td>
+            </tr>
+            <tr>
+                <td>Measurement Date</td>
+                <td>{measurement_date}</td>
+            </tr>
+            <tr>
+                <td>Gross Volume</td>
+                <td>{gross_volume:.2f} barrels</td>
+            </tr>
+            <tr>
+                <td>BSW %</td>
+                <td>{bsw_percent:.2f}%</td>
+            </tr>
+            <tr>
+                <td>Temperature</td>
+                <td>{temperature:.2f}°F</td>
+            </tr>
+        </table>
 
         <div class="divider"></div>
 
-        <p style="font-size: 14px; color: #6b7280;">
-            If you did not expect this invitation or have questions, please contact {inviter_name} or our support team.
+        <h2>What You Should Do</h2>
+        <ol>
+            <li>Review the updated entry carefully</li>
+            <li>Verify the changes are correct</li>
+            <li>Approve or reject the changes in the dashboard</li>
+            <li>Contact {editor_name} if you have questions</li>
+        </ol>
+
+        <a href="{APP_URL}/dashboard/production?entry={entry_id}" class="button">
+            Review & Approve Entry
+        </a>
+
+        <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
+            <strong>Important:</strong> Until you approve this entry, it will not be included in any reconciliation calculations.
         </p>
     """
 
     return _wrap_in_layout(body)
+
 
 def render_invitation_email(
     invitee_name: str,
@@ -489,7 +515,7 @@ def render_invitation_email(
             <li>Collaborate with team members</li>
         </ul>
 
-        <a href="https://flowshare-v2.web.app/invitations/{invitation_id}/accept" class="button">
+        <a href="{APP_URL}/invitation/{invitation_id}" class="button">
             Accept Invitation
         </a>
 

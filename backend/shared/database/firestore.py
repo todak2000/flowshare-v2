@@ -81,5 +81,6 @@ class FirestoreCollections:
     INVITATIONS = "invitations"
     PRODUCTION_ENTRIES = "production_entries"
     RECONCILIATIONS = "reconciliations"
+    TERMINAL_RECEIPTS = "terminal_receipts"
     API_KEYS = "api_keys"
     PARTNERS = "partners"

@@ -25,7 +25,8 @@ TOPICS = {
     "entry-flagged": ["entry-flagged-sub"],
     "reconciliation-triggered": ["reconciliation-triggered-sub"],
     "reconciliation-complete": ["reconciliation-complete-sub"],
-    "invitation-created": ["invitation-created-sub"]
+    "invitation-created": ["invitation-created-sub"],
+    "publish_production_entry_edited": ["publish_production_entry_edited-sub"]
 }
 
 

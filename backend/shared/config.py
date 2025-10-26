@@ -21,7 +21,9 @@ class Settings(BaseSettings):
 
     # Pub/Sub Topics
     pubsub_production_entry_topic: str = "production-entry-created"
+    publish_production_entry_edited: str = "publish_production_entry_edited"
     pubsub_entry_flagged_topic: str = "entry-flagged"
+    pubsub_entry_edited_topic: str = "entry-edited"
     pubsub_reconciliation_trigger_topic: str = "reconciliation-triggered"
     pubsub_reconciliation_complete_topic: str = "reconciliation-complete"
     pubsub_invitation_created_topic: str = "invitation-created"
@@ -51,6 +53,9 @@ class Settings(BaseSettings):
     zepto_from_email: str = "noreply@flowshare.io"
     logo_url: str = ""
 
+    # Frontend URL
+    app_url: str = "http://localhost:3000"
+
     # Environment
     environment: str = "development"
     debug: bool = True
@@ -58,7 +63,7 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins into a list."""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     class Config:
         # Look for .env file in the backend directory (parent of shared)

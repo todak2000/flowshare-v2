@@ -56,6 +56,8 @@ class User(UserBase):
     tenant_ids: List[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+    last_login_at: Optional[datetime] = None
+    organization: Optional[str] = None
 
     class Config:
         from_attributes = True
