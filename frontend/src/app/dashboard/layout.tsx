@@ -10,6 +10,7 @@ import { useAuthStore, UserProfile } from "@/store/auth-store";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { LogoutDialog } from "@/components/layout/LogoutDialog";
+import { LayoutSkeleton } from "@/components/layout/LayoutSkeleton";
 
 export default function DashboardLayout({
   children,
@@ -58,15 +59,7 @@ export default function DashboardLayout({
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="space-y-4 w-full max-w-md px-6">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      </div>
-    );
+    return <LayoutSkeleton />;
   }
 
   return (

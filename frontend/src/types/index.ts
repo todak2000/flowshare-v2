@@ -1,8 +1,8 @@
 export enum UserRole {
-  COORDINATOR = 'coordinator',
-  PARTNER = 'partner',
-  FIELD_OPERATOR = 'field_operator',
-  AUDITOR = 'auditor',
+  COORDINATOR = "coordinator",
+  PARTNER = "partner",
+  FIELD_OPERATOR = "field_operator",
+  AUDITOR = "auditor",
 }
 
 export interface User {
@@ -50,7 +50,7 @@ export interface ProductionEntry {
   api_gravity: number;
   pressure?: number;
   meter_factor: number;
-  status: 'pending' | 'validated' | 'flagged';
+  status: "pending" | "validated" | "flagged";
   validation_notes?: string;
   anomaly_score?: number;
   submitted_by: string;
@@ -64,7 +64,7 @@ export interface Reconciliation {
   period_start: string;
   period_end: string;
   terminal_volume: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   result?: ReconciliationResult;
   error_message?: string;
   triggered_by: string;
@@ -103,9 +103,11 @@ export interface Invitation {
   email: string;
   role: UserRole;
   partner_id?: string;
-  notification_settings: NotificationSettings;
-  invited_by: string;
-  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  tenant_name?: string;
+  partner_name?: string;
+  notification_settings?: NotificationSettings;
+  invited_by?: string;
+  status: "pending" | "accepted" | "expired" | "cancelled";
   created_at: string;
   expires_at: string;
 }

@@ -8,6 +8,7 @@ export interface UserProfile {
   tenant_ids: string[]  // Backend returns array of tenant IDs
   partner_id?: string
   full_name?: string
+  organization?: string
   firebase_uid?: string
   phone_number?: string
   created_at?: string

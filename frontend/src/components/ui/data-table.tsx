@@ -80,7 +80,7 @@ export function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-6 py-4 text-left font-semibold text-foreground"
+                  className="px-6 py-4 whitespace-nowrap text-left font-semibold text-foreground"
                   style={{ width: column.width }}
                 >
                   {column.sortable && onSort ? (
@@ -110,7 +110,7 @@ export function DataTable<T extends Record<string, any>>({
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center text-muted-foreground">
+                <td colSpan={columns.length} className="px-6 py-12 whitespace-nowrap text-center text-muted-foreground">
                   {emptyMessage}
                 </td>
               </tr>
@@ -121,7 +121,7 @@ export function DataTable<T extends Record<string, any>>({
                   className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className="px-6 py-4 text-foreground">
+                    <td key={column.key} className="px-6 whitespace-nowrap font-mono py-4 text-foreground">
                       {column.render
                         ? column.render(row)
                         : String(row[column.key] ?? '-')}

@@ -1,4 +1,8 @@
+"use client"
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,9 +24,20 @@ import {
   BarChart3,
   Users,
   FileCheck,
+  LayoutDashboard,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    setIsAuthenticated(!!user);
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       {/* Navigation */}
@@ -58,14 +73,27 @@ export default function LandingPage() {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/auth/login">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-              <Link href="/payment/select-plan">
-                <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                  Get Started Free
+              <ThemeToggle />
+              {isAuthenticated ? (
+                <Button
+                  onClick={() => router.push("/dashboard")}
+                  className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                >
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Go to Dashboard
                 </Button>
-              </Link>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="ghost">Sign In</Button>
+                  </Link>
+                  <Link href="/payment/select-plan">
+                    <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                      Get Started Free
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

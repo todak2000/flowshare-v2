@@ -11,28 +11,14 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-// Assuming ProductionEntry type is defined elsewhere, e.g., in @/types/production
-// type ProductionEntry = {
-//   measurement_date: string;
-//   gross_volume: number;
-//   bsw_percent: number;
-//   meter_factor: number;
-//   temperature: number;
-// };
 import { Badge } from "@/components/ui/badge";
-import { DropletIcon, Thermometer, FlaskConical } from "lucide-react";
+import {
+  LINE_SERIES,
+  METRIC_TOGGLES,
+  ProductionLineChartProps,
+} from "./components";
 
-interface ProductionLineChartProps {
-  data: any[]; // Using any[] to be flexible if ProductionEntry type isn't available
-  showGrossVolume?: boolean;
-  showBSW?: boolean;
-  showTemperature?: boolean;
-  onToggleChange?: (toggles: {
-    showGrossVolume: boolean;
-    showTemperature: boolean;
-    showBSW: boolean;
-  }) => void;
-}
+// Define proper type (replace `any`)
 
 export function ProductionLineChart({
   data,
@@ -55,46 +41,37 @@ export function ProductionLineChart({
     }
   };
 
-  // Get theme-aware colors
-  const getAxisColor = () => {
-    // Use CSS variable for foreground color that adapts to theme
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue('--foreground')
-      .trim() || '0 0% 45%'; // fallback
+  // Safer theme color getter (avoids runtime errors)
+  const getCSSVar = (name: string): string => {
+    if (typeof document === "undefined") return "240 5.9% 90%";
+    return (
+      getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim()
+        .replace("hsl(", "")
+        .replace(")", "") || "240 5.9% 90%"
+    );
   };
 
-  const getGridColor = () => {
-    // Use CSS variable for border color that adapts to theme
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue('--border')
-      .trim() || '240 5.9% 90%'; // fallback
-  };
-
-  // Transform data for chart
   const chartData = React.useMemo(() => {
-    const transformed = data
-      .map((entry, index) => {
-        // --- Robust Data Coercion ---
-        // Convert all values to numbers, defaulting to null if invalid (NaN)
+    return data
+      .map((entry) => {
         const grossVol = Number(entry.gross_volume);
         const bsw = Number(entry.bsw_percent);
         const factor = Number(entry.meter_factor);
         const temp = Number(entry.temperature);
 
-        const validGross = !isNaN(grossVol) && grossVol !== 0 ? grossVol : null;
+        const validGross = !isNaN(grossVol) && grossVol > 0 ? grossVol : null;
         const validBsw = !isNaN(bsw) ? bsw : null;
-        // Default meter factor to 1 if invalid, as it's a multiplier
-        const validFactor = !isNaN(factor) && factor !== 0 ? factor : 1;
+        const validFactor = !isNaN(factor) && factor > 0 ? factor : 1;
         const validTemp = !isNaN(temp) ? temp : null;
 
         let validNet = null;
-        // Only calculate netVolume if inputs are valid
-        if (validGross !== null && validBsw !== null && validFactor !== null) {
+        if (validGross !== null && validBsw !== null) {
           validNet = validGross * (1 - validBsw / 100) * validFactor;
         }
-        // --- End Robust Data Coercion ---
 
-        const dataPoint = {
+        return {
           date: new Date(entry.measurement_date).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -107,15 +84,11 @@ export function ProductionLineChart({
           bsw: validBsw,
           temperature: validTemp,
         };
-
-        return dataPoint;
       })
       .sort(
         (a, b) =>
           new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()
       );
-
-    return transformed;
   }, [data]);
 
   if (chartData.length === 0) {
@@ -128,14 +101,7 @@ export function ProductionLineChart({
       </div>
     );
   }
-
-  // Check if we have volume data
-  const hasVolumeData = chartData.some(
-    (d) => d.grossVolume !== null || d.netVolume !== null
-  );
-  if (!hasVolumeData && showGrossVolume) {
-    console.warn("⚠️ Chart - No volume data found in entries");
-  }
+  const toggles = { showGrossVolume, showBSW, showTemperature };
 
   return (
     <div className="rounded-lg border border-border bg-card p-6">
@@ -144,92 +110,65 @@ export function ProductionLineChart({
           Production Trends
         </h3>
         <div className="flex gap-2">
-          <Badge
-            variant={showGrossVolume ? "default" : "outline"}
-            className="cursor-pointer transition-all hover:opacity-80"
-            onClick={() => handleToggle("showGrossVolume")}
-          >
-            <DropletIcon className="mr-1 h-3 w-3" />
-            Volume
-          </Badge>
-          <Badge
-            variant={showTemperature ? "default" : "outline"}
-            className="cursor-pointer transition-all hover:opacity-80"
-            onClick={() => handleToggle("showTemperature")}
-          >
-            <Thermometer className="mr-1 h-3 w-3" />
-            Temperature
-          </Badge>
-          <Badge
-            variant={showBSW ? "default" : "outline"}
-            className="cursor-pointer transition-all hover:opacity-80"
-            onClick={() => handleToggle("showBSW")}
-          >
-            <FlaskConical className="mr-1 h-3 w-3" />
-            BSW
-          </Badge>
+          {METRIC_TOGGLES.map((toggle) => (
+            <Badge
+              key={toggle.id}
+              variant={toggle.variant(toggles[toggle.id])}
+              className="cursor-pointer transition-all hover:opacity-80"
+              onClick={() => handleToggle(toggle.id)}
+            >
+              {toggle.icon}
+              {toggle.label}
+            </Badge>
+          ))}
         </div>
       </div>
+
       <ResponsiveContainer width="100%" height={400}>
         <LineChart
           data={chartData}
-          margin={{
-            top: 5,
-            right: 60,
-            left: 20,
-            bottom: 5,
-          }}
+          margin={{ top: 5, right: 60, left: 20, bottom: 5 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke={`hsl(${getGridColor()})`}
+            stroke={`hsl(${getCSSVar("--border")})`}
             strokeOpacity={0.5}
           />
           <XAxis
             dataKey="date"
-            tick={{
-              fill: `hsl(${getAxisColor()})`,
-              fontSize: 12
-            }}
-            stroke={`hsl(${getAxisColor()})`}
+            tick={{ fill: `hsl(${getCSSVar("--foreground")})`, fontSize: 12 }}
+            stroke={`hsl(${getCSSVar("--foreground")})`}
             strokeOpacity={0.5}
           />
           <YAxis
             yAxisId="left"
-            tick={{
-              fill: `hsl(${getAxisColor()})`,
-              fontSize: 12
-            }}
-            stroke={`hsl(${getAxisColor()})`}
+            tick={{ fill: `hsl(${getCSSVar("--foreground")})`, fontSize: 12 }}
+            stroke={`hsl(${getCSSVar("--foreground")})`}
             strokeOpacity={0.5}
             label={{
               value: "Volume (mbbls)",
               angle: -90,
               position: "insideLeft",
               style: {
-                fill: `hsl(${getAxisColor()})`,
+                fill: `hsl(${getCSSVar("--foreground")})`,
                 fontWeight: "600",
                 fontSize: 13,
               },
             }}
             domain={[0, "auto"]}
-            allowDataOverflow={false}
           />
           <YAxis
             yAxisId="right"
             orientation="right"
-            tick={{
-              fill: `hsl(${getAxisColor()})`,
-              fontSize: 12
-            }}
-            stroke={`hsl(${getAxisColor()})`}
+            tick={{ fill: `hsl(${getCSSVar("--foreground")})`, fontSize: 12 }}
+            stroke={`hsl(${getCSSVar("--foreground")})`}
             strokeOpacity={0.5}
             label={{
               value: "BSW % / Temp °F",
               angle: 90,
               position: "insideRight",
               style: {
-                fill: `hsl(${getAxisColor()})`,
+                fill: `hsl(${getCSSVar("--foreground")})`,
                 fontWeight: "600",
                 fontSize: 13,
               },
@@ -245,25 +184,19 @@ export function ProductionLineChart({
             }}
             labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
             formatter={(value: number, name: string) => {
-              if (value === null || value === undefined) return null;
-
-              // Format based on data key
-              if (name === "Gross Volume" || name === "Net Volume") {
+              if (value == null) return null;
+              if (["Gross Volume", "Net Volume"].includes(name)) {
                 return [`${value.toFixed(1)} mbbls`, name];
               }
-              if (name === "bsw") {
-                return [`${value.toFixed(1)}%`, "BSW"];
-              }
-              if (name === "temperature") {
-                return [`${value.toFixed(1)}°F`, "Temperature"];
-              }
-
+              if (name === "BSW %") return [`${value.toFixed(1)}%`, name];
+              if (name === "Temperature °F")
+                return [`${value.toFixed(1)}°F`, name];
               return [value.toString(), name];
             }}
           />
           <Legend
             wrapperStyle={{
-              color: `hsl(${getAxisColor()})`,
+              color: `hsl(${getCSSVar("--foreground")})`,
               paddingTop: "10px",
             }}
             iconType="line"
@@ -278,66 +211,26 @@ export function ProductionLineChart({
             }}
           />
 
-          {showGrossVolume && (
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="grossVolume"
-              stroke="#3b82f6" // Vibrant blue for better visibility
-              strokeWidth={3} // Thicker for prominence
-              dot={{ fill: "#3b82f6", r: 5 }}
-              activeDot={{ r: 8 }}
-              animationDuration={1000}
-              connectNulls={true}
-              name="Gross Volume"
-            />
-          )}
-
-          {showGrossVolume && (
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="netVolume"
-              stroke="#10b981" // Vibrant green for better visibility
-              strokeWidth={3} // Thicker for prominence
-              dot={{ fill: "#10b981", r: 5 }}
-              activeDot={{ r: 8 }}
-              animationDuration={1000}
-              animationBegin={200}
-              connectNulls={true}
-              name="Net Volume"
-            />
-          )}
-
-          {showBSW && (
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="bsw"
-              stroke="#ffc658" // Changed color
-              strokeWidth={2}
-              dot={{ fill: "#ffc658", r: 4 }}
-              activeDot={{ r: 6 }}
-              animationDuration={1000}
-              animationBegin={400}
-              connectNulls={true} // <-- Fix for broken lines
-            />
-          )}
-
-          {showTemperature && (
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="temperature"
-              stroke="#ff7300" // Changed color
-              strokeWidth={2}
-              dot={{ fill: "#ff7300", r: 4 }}
-              activeDot={{ r: 6 }}
-              animationDuration={1000}
-              animationBegin={600}
-              connectNulls={true} // <-- Fix for broken lines
-            />
-          )}
+          {/* Dynamically render lines */}
+          {LINE_SERIES.map((series) => {
+            if (!series.shouldRender(toggles)) return null;
+            return (
+              <Line
+                key={series.id}
+                yAxisId={series.yAxisId}
+                type="monotone"
+                dataKey={series.id}
+                stroke={series.stroke}
+                strokeWidth={series.strokeWidth}
+                dot={{ fill: series.stroke, r: series.dot.r }}
+                activeDot={{ r: series.activeDot.r }}
+                animationDuration={1000}
+                animationBegin={series.animationBegin}
+                connectNulls={true}
+                name={series.name}
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>
