@@ -8,3 +8,4 @@ frontend/.next
 frontend/node_modules
 backend/test_pubsub.py
 backend/*.sh
+sample_report.pdf
