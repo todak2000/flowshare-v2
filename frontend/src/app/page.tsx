@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
+import { Logo } from "@/components/layout/Logo";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -44,14 +45,8 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <Sparkles className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary via-primary to-violet-600 bg-clip-text text-transparent">
-                FlowShare
-              </span>
-            </div>
+            <Logo />
+
             <div className="hidden md:flex items-center space-x-8">
               <Link
                 href="#features"
@@ -699,12 +694,7 @@ export default function LandingPage() {
         <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Sparkles className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <span className="text-xl font-bold">FlowShare</span>
-              </div>
+              <Logo />
               <p className="text-sm text-muted-foreground leading-relaxed">
                 AI-powered hydrocarbon allocation for the modern oil & gas
                 industry.

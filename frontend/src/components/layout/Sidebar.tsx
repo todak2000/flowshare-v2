@@ -18,6 +18,7 @@ import {
 import { NavItem } from "./NavItem";
 import { UserProfile } from "@/store/auth-store";
 import { useMemo } from "react";
+import { Logo } from "./Logo";
 
 interface SidebarProps {
   user: UserProfile | null;
@@ -75,14 +76,7 @@ export function Sidebar({
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-          <div className="w-10 h-10 bg-linear-to-br from-primary via-primary to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold bg-linear-to-r from-primary to-violet-600 bg-clip-text text-transparent">
-            FlowShare
-          </span>
-        </div>
+        <Logo />
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
