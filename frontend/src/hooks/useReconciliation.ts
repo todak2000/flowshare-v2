@@ -24,7 +24,7 @@ export function useReconciliation(tenantId: string | null) {
   // State for reconciliations
   const [reconciliations, setReconciliations] = useState<Reconciliation[]>([]);
   const [reconciliationsLoading, setReconciliationsLoading] = useState(false);
-
+const [validationError, setValidationError] = useState<string | null>(null);
   // --- DATA FETCHING ---
 
   const fetchTerminalReceipts = useCallback(async (page: number) => {
@@ -75,8 +75,12 @@ export function useReconciliation(tenantId: string | null) {
       
       // Refresh reconciliations after a delay (as in original)
       setTimeout(fetchReconciliations, 1000); 
-    } catch (error) {
+    } catch (error:any) {
       console.error("Failed to submit terminal receipt:", error);
+      const errorMessage =
+        error?.response?.data?.detail ||
+        "An unexpected error occurred. Please try again.";
+      setValidationError(errorMessage);
       throw error; // Re-throw for the form to catch
     }
   };
@@ -101,5 +105,6 @@ export function useReconciliation(tenantId: string | null) {
     fetchTerminalReceipts, // For pagination
     handleSubmitTerminalReceipt,
     handleDeleteReceipt,
+    validationError, setValidationError
   };
 }

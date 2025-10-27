@@ -107,12 +107,22 @@ export function ActionCard({
   );
 }
 
+interface Activity {
+  action: string;
+  time: string;
+  status: string;
+}
+
+interface RecentActivityCardProps {
+  activities?: Activity[];
+  isLoading?: boolean;
+}
+
 /**
- * A card displaying the most recent activities.
- * In a real app, the `activities` array would likely be passed as a prop.
+ * A card displaying the most recent activities from audit logs.
  */
-export function RecentActivityCard() {
-  const activities = [
+export function RecentActivityCard({ activities = [], isLoading = false }: RecentActivityCardProps) {
+  const defaultActivities = [
     {
       action: "Production entry submitted",
       time: "2 minutes ago",
@@ -135,6 +145,8 @@ export function RecentActivityCard() {
     },
   ];
 
+  const displayActivities = activities.length > 0 ? activities : defaultActivities;
+
   return (
     <Card className="border-2">
       <CardHeader>
@@ -145,7 +157,10 @@ export function RecentActivityCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((item, i) => (
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading activities...</p>
+          ) : (
+            displayActivities.map((item, i) => (
             <div
               key={i}
               className="flex items-center gap-4 pb-4 last:pb-0 border-b last:border-0"
@@ -164,7 +179,8 @@ export function RecentActivityCard() {
                 <p className="text-xs text-muted-foreground">{item.time}</p>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </CardContent>
     </Card>
@@ -172,15 +188,37 @@ export function RecentActivityCard() {
 }
 
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+interface TeamManagementCardProps {
+  teamMembers?: TeamMember[];
+  isLoading?: boolean;
+}
+
 /**
  * A card displaying team members and a link to team management.
- * In a real app, `teamMembers` would be passed as a prop.
  */
-export function TeamManagementCard() {
-  const teamMembers = [
-    { name: "John Doe", role: "Coordinator", fallback: "JD" },
-    { name: "Sarah Miller", role: "Partner", fallback: "SM" },
+export function TeamManagementCard({ teamMembers = [], isLoading = false }: TeamManagementCardProps) {
+  const defaultTeamMembers = [
+    { id: "1", name: "John Doe", email: "john@example.com", role: "Coordinator", status: "active", fallback: "JD" },
+    { id: "2", name: "Sarah Miller", email: "sarah@example.com", role: "Partner", status: "active", fallback: "SM" },
   ];
+
+  const displayTeamMembers = teamMembers.length > 0 ? teamMembers : defaultTeamMembers;
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
 
   return (
     <Card className="border-2">
@@ -190,23 +228,27 @@ export function TeamManagementCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {teamMembers.map((member) => (
-            <div
-              key={member.name}
-              className="flex items-center gap-3 p-3 rounded-lg border border-border"
-            >
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {member.fallback}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{member.name}</p>
-                <p className="text-xs text-muted-foreground">{member.role}</p>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading team members...</p>
+          ) : (
+            displayTeamMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center gap-3 p-3 rounded-lg border border-border"
+              >
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{member.name}</p>
+                  <p className="text-xs text-muted-foreground">{member.role}</p>
+                </div>
+                <Badge variant="success">{member.status === "active" ? "Active" : member.status}</Badge>
               </div>
-              <Badge variant="success">Active</Badge>
-            </div>
-          ))}
+            ))
+          )}
           <Link
             href="/dashboard/team"
             className="w-full mt-2 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors
@@ -221,55 +263,94 @@ export function TeamManagementCard() {
   );
 }
 
-export const statCardData = [
-  {
-    title: "Total Production",
-    value: "124,589",
-    subtitle: "BBL this month",
-    icon: (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-        <div className="h-5 w-5 rounded bg-primary/50" />
-      </div>
-    ),
-    trend: (
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm font-medium text-green-600">+12.5%</span>
-        <span className="text-sm text-muted-foreground">from last month</span>
-      </div>
-    ),
-  },
-  {
-    title: "Active Reconciliations",
-    value: "8",
-    subtitle: "In progress",
-    icon: (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
-        <div className="h-5 w-5 rounded bg-yellow-500/50" />
-      </div>
-    ),
-    trend: (
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">3 pending review</span>
-      </div>
-    ),
-  },
-  {
-    title: "AI Anomalies Detected",
-    value: "3",
-    subtitle: "Requires attention",
-    icon: (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-        <div className="h-5 w-5 rounded bg-red-500/50" />
-      </div>
-    ),
-    trend: (
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm font-medium text-green-600">-40%</span>
-        <span className="text-sm text-muted-foreground">from last month</span>
-      </div>
-    ),
-  },
-];
+interface DashboardStats {
+  total_production: number;
+  production_trend: number;
+  active_reconciliations: number;
+  pending_reconciliations: number;
+  anomalies_detected: number;
+  anomalies_trend: number;
+  total_entries_this_month: number;
+  total_entries_last_month: number;
+}
+
+export const getStatCardData = (stats: DashboardStats | null) => {
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat("en-US").format(Math.round(num));
+  };
+
+  const formatTrend = (trend: number) => {
+    const isPositive = trend >= 0;
+    const sign = isPositive ? "+" : "";
+    return `${sign}${trend.toFixed(1)}%`;
+  };
+
+  return [
+    {
+      title: "Total Production",
+      value: stats ? formatNumber(stats.total_production) : "0",
+      subtitle: "BBL this month",
+      icon: (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <div className="h-5 w-5 rounded bg-primary/50" />
+        </div>
+      ),
+      trend: stats ? (
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            className={`text-sm font-medium ${
+              stats.production_trend >= 0 ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {formatTrend(stats.production_trend)}
+          </span>
+          <span className="text-sm text-muted-foreground">from last month</span>
+        </div>
+      ) : null,
+    },
+    {
+      title: "Active Reconciliations",
+      value: stats ? stats.active_reconciliations.toString() : "0",
+      subtitle: "In progress",
+      icon: (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
+          <div className="h-5 w-5 rounded bg-yellow-500/50" />
+        </div>
+      ),
+      trend: stats && stats.pending_reconciliations > 0 ? (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {stats.pending_reconciliations} pending review
+          </span>
+        </div>
+      ) : null,
+    },
+    {
+      title: "AI Anomalies Detected",
+      value: stats ? stats.anomalies_detected.toString() : "0",
+      subtitle: "Requires attention",
+      icon: (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+          <div className="h-5 w-5 rounded bg-red-500/50" />
+        </div>
+      ),
+      trend: stats ? (
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            className={`text-sm font-medium ${
+              stats.anomalies_trend <= 0 ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {formatTrend(stats.anomalies_trend)}
+          </span>
+          <span className="text-sm text-muted-foreground">from last month</span>
+        </div>
+      ) : null,
+    },
+  ];
+};
+
+export const statCardData = getStatCardData(null);
 
 export const actionCardData = [
   {

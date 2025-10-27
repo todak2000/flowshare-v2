@@ -21,6 +21,7 @@ export interface ProductionEntry {
   status: ProductionEntryStatus
   validation_notes?: string
   anomaly_score?: number
+  ai_analysis?: string  // AI-generated analysis for flagged entries (HTML format)
   created_at: string
   updated_at: string
   approved_by?: string

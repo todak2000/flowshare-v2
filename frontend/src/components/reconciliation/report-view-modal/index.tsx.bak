@@ -211,7 +211,6 @@ export function ReportViewModal({
                 unit={card.unit}
                 valueColor={card.valueColor}
                 bgColor={card.bgColor}
-                extra={(card as any).extra}
               />
             ))}
           </div>

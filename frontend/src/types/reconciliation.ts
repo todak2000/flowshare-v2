@@ -39,6 +39,7 @@ export interface Reconciliation {
   terminal_volume: number
   status: ReconciliationStatus
   result?: ReconciliationResult
+  ai_analysis?: string  // AI-generated comprehensive analysis (HTML format)
   error_message?: string
   created_at: string
   completed_at?: string

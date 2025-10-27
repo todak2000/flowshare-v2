@@ -14,6 +14,7 @@ import {
   ProductionEntry,
   ProductionEntryStatus,
 } from "@/types/production";
+import { formatShortDate, formatVolumeWithCommas } from "@/lib/utils";
 
 // Import all our new components and the existing ones
 
@@ -22,6 +23,7 @@ import { ProductionFiltersComponent } from "./production-filters";
 import { ProductionEntryModal } from "./production-entry-modal";
 import { EditEntryModal } from "./edit-entry-modal";
 import { ApproveEntryModal } from "./approve-entry-modal";
+import { AIAnalysisModal } from "./ai-analysis-modal";
 import { ProductionPageHeader } from "./production-data-header";
 import { ProductionCharts } from "./production-charts";
 import { ProductionDataTableWrapper } from "./production-table-wrapper";
@@ -36,13 +38,13 @@ const getStatusBadge = (status: ProductionEntryStatus) => {
     [ProductionEntryStatus.REJECTED]: "bg-red-600 text-red-50 font-semibold",
   };
   const labels: Record<ProductionEntryStatus, string> = {
-      [ProductionEntryStatus.PENDING]: "",
-      [ProductionEntryStatus.APPROVED]: "",
-      [ProductionEntryStatus.FLAGGED]: "",
-      [ProductionEntryStatus.PENDING_APPROVAL]: "",
-      [ProductionEntryStatus.REJECTED]: ""
+      [ProductionEntryStatus.PENDING]: "Pending",
+      [ProductionEntryStatus.APPROVED]: "Approved",
+      [ProductionEntryStatus.FLAGGED]: "Flagged",
+      [ProductionEntryStatus.PENDING_APPROVAL]: "Pending Approval",
+      [ProductionEntryStatus.REJECTED]: "Rejected"
   };
-  return <span className={`... ${styles[status]}`}>{labels[status]}</span>;
+  return <span className={`... ${styles[status]} px-2 rounded-lg py-1`}>{labels[status]}</span>;
 };
 
 interface ProductionDataContentProps {
@@ -82,6 +84,7 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
   const [entryModalOpen, setEntryModalOpen] = React.useState(false);
   const [editModalOpen, setEditModalOpen] = React.useState(false);
   const [approveModalOpen, setApproveModalOpen] = React.useState(false);
+  const [aiAnalysisModalOpen, setAiAnalysisModalOpen] = React.useState(false);
   const [selectedEntry, setSelectedEntry] = React.useState<ProductionEntry | null>(null);
 
   // 3. Define UI-specific handlers (modal openers)
@@ -95,9 +98,50 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
     setApproveModalOpen(true);
   };
 
+  const handleViewAIAnalysis = (entry: ProductionEntry) => {
+    setSelectedEntry(entry);
+    setAiAnalysisModalOpen(true);
+  };
+
   const handleExport = () => {
-    // Your export logic here
-    console.log("Exporting data...");
+    // Dynamic import to avoid SSR issues
+    import('xlsx').then((XLSX) => {
+      // Prepare data for export
+      const exportData = entries.map((entry) => {
+        const partner = partners.find((p) => p.id === entry.partner_id);
+        const netVolume = entry.gross_volume * (1 - entry.bsw_percent / 100);
+
+        return {
+          Date: formatShortDate(entry.measurement_date, true),
+          ...(userRole === "coordinator" ? { Partner: partner?.organization || partner?.name || "N/A" } : {}),
+          "Gross Volume (BBL)": formatVolumeWithCommas(entry.gross_volume),
+          "Net Volume (BBL)": formatVolumeWithCommas(netVolume),
+          "BSW %": entry.bsw_percent.toFixed(2),
+          "Temperature (°F)": entry.temperature.toFixed(1),
+          "API Gravity": entry.api_gravity.toFixed(1),
+          "Pressure (psi)": entry.pressure?.toFixed(1) || "N/A",
+          Status: entry.status,
+        };
+      });
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Production Data");
+
+      // Generate filename with date range
+      const startDate = filters.start_date ? formatShortDate(filters.start_date, false) : "All";
+      const endDate = filters.end_date ? formatShortDate(filters.end_date, true) : "Data";
+      const filename = `Production_${startDate}_to_${endDate}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(workbook, filename);
+    }).catch((error) => {
+      console.error("Export failed:", error);
+      alert("Failed to export data. Please try again.");
+    });
   };
   
   // 4. Define columns (UI logic)
@@ -105,7 +149,9 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
     {
       key: "measurement_date",
       header: "Date",
-      // ... (your render logic)
+      render: (row: ProductionEntry) => (
+        <span className="font-mono">{formatShortDate(row.measurement_date)}</span>
+      ),
     },
     ...(userRole === "coordinator"
       ? [
@@ -119,15 +165,62 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
           } as Column<ProductionEntry>,
         ]
       : []),
-    { key: "gross_volume", header: "Gross Vol. (mbbls)", /* ... */ },
-    { key: "net_volume", header: "Net Vol. (mbbls)", /* ... */ },
-    { key: "bsw_percent", header: "BSW %", /* ... */ },
-    { key: "temperature", header: "Temp (°F)", /* ... */ },
-    { key: "api_gravity", header: "API Gravity", /* ... */ },
+    {
+      key: "gross_volume",
+      header: "Gross Vol. (BBL)",
+      render: (row: ProductionEntry) => (
+        <span className="font-mono">{formatVolumeWithCommas(row.gross_volume)}</span>
+      ),
+    },
+    {
+      key: "net_volume",
+      header: "Net Vol. (BBL)",
+      render: (row: ProductionEntry) => {
+        // Calculate net volume: gross_volume * (1 - bsw_percent/100)
+        const netVolume = row.gross_volume * (1 - row.bsw_percent / 100);
+        return <span className="font-mono">{formatVolumeWithCommas(netVolume)}</span>;
+      },
+    },
+    {
+      key: "bsw_percent",
+      header: "BSW %",
+      render: (row: ProductionEntry) => (
+        <span className="font-mono">{row.bsw_percent.toFixed(2)}%</span>
+      ),
+    },
+    {
+      key: "temperature",
+      header: "Temp (°F)",
+      render: (row: ProductionEntry) => (
+        <span className="font-mono">{row.temperature.toFixed(1)}°F</span>
+      ),
+    },
+    {
+      key: "api_gravity",
+      header: "API Gravity",
+      render: (row: ProductionEntry) => (
+        <span className="font-mono">{row.api_gravity.toFixed(1)}°</span>
+      ),
+    },
     {
       key: "status",
       header: "Status",
-      render: (row) => getStatusBadge(row.status),
+      render: (row) => {
+        const badge = getStatusBadge(row.status);
+        // Make flagged entries clickable if they have AI analysis
+        if (row.status === ProductionEntryStatus.FLAGGED && row.ai_analysis) {
+          return (
+            <button
+              onClick={() => handleViewAIAnalysis(row)}
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+              title="Click to view AI analysis"
+            >
+              {badge}
+            </button>
+          );
+        }
+        return badge;
+      },
     },
     ...(userRole !== "coordinator"
       ? [
@@ -158,6 +251,7 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
       : []),
   ], [userRole, partners, handleReject]); // Dependencies for columns
 
+  
   // 5. Render the UI
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -230,6 +324,14 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
         }}
         onApprove={handleApprove}
         onReject={handleReject}
+      />
+      <AIAnalysisModal
+        entry={selectedEntry}
+        open={aiAnalysisModalOpen}
+        onClose={() => {
+          setAiAnalysisModalOpen(false);
+          setSelectedEntry(null);
+        }}
       />
     </div>
   );

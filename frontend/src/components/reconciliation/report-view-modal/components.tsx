@@ -8,6 +8,7 @@ interface SummaryCardProps {
   unit: string;
   valueColor?: string;
   bgColor?: string;
+  extra?: string;
 }
 
 export const SummaryCard = ({
@@ -15,17 +16,23 @@ export const SummaryCard = ({
   title,
   value,
   unit,
-  valueColor = "inherit",
+  valueColor,
   bgColor = "bg-primary/5",
+  extra,
 }: SummaryCardProps) => (
   <div className={`p-4 border rounded-lg ${bgColor}`}>
     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
       <Icon className="h-4 w-4" />
       {title}
     </div>
-    <div className="text-2xl font-bold font-mono" style={{ color: valueColor }}>
+    <div className={`text-2xl font-bold font-mono ${valueColor || ""}`}>
       {value} <span className="text-sm font-normal">{unit}</span>
     </div>
+    {extra && (
+      <div className="text-xs text-muted-foreground mt-1 font-mono">
+        {extra}
+      </div>
+    )}
   </div>
 );
 
@@ -47,7 +54,7 @@ export const ALLOCATION_COLUMNS = [
   { key: "partner", label: "Partner", align: "left" as const },
   { key: "gross", label: "Gross Volume (mbbls)", align: "center" as const },
   { key: "bsw", label: "BSW %", align: "center" as const },
-  { key: "net", label: "Net Volume (mbbls)", align: "center" as const },
   { key: "ownership", label: "Ownership %", align: "center" as const },
-  { key: "allocated", label: "Allocated Volume (mbbls)", align: "right" as const },
+  { key: "allocated", label: "Allocated Volume (mbbls)", align: "center" as const },
+  { key: "shrinkage", label: "Shrinkage (mbbls)", align: "right" as const },
 ];

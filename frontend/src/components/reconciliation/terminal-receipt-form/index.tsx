@@ -31,23 +31,27 @@ import {
 // --- Main Component ---
 interface TerminalReceiptFormProps {
   tenantId: string;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any) => Promise<boolean>;
   onCancel?: () => void;
+  setValidationError: (message: string | null) => void;
+  validationError: string | null;
 }
 
 interface ExistingReceiptCheck {
   checking: boolean;
   exists: boolean;
   receiptId?: string;
+  
 }
 
 export function TerminalReceiptForm({
   tenantId,
   onSubmit,
   onCancel,
+  setValidationError,
+  validationError
 }: TerminalReceiptFormProps) {
   const [loading, setLoading] = useState(false);
-  const [validationError, setValidationError] = useState<string>("");
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
   const [existingReceiptCheck, setExistingReceiptCheck] =
     useState<ExistingReceiptCheck>({
@@ -122,7 +126,7 @@ export function TerminalReceiptForm({
         );
       } else {
         setExistingReceiptCheck({ checking: false, exists: false });
-        setValidationError("");
+        setValidationError(null);
       }
     } catch (error) {
       console.error("Failed to check existing receipts:", error);
@@ -182,17 +186,20 @@ export function TerminalReceiptForm({
     if (existingReceiptCheck.exists) return;
 
     setLoading(true);
-    setValidationError("");
+    setValidationError(null);
 
     try {
+      // Local validation
       const validation = await validateApprovalRate();
       if (!validation.valid) {
         setValidationError(validation.message || "Validation failed");
+        setLoading(false);
         return;
       }
 
+      // Submit to parent handler (errors are handled by the hook)
       const receiptDate = getReceiptDate();
-      await onSubmit({
+      const success = await onSubmit({
         tenant_id: tenantId,
         receipt_date: receiptDate.toISOString(),
         terminal_volume: parseFloat(formData.terminal_volume),
@@ -201,18 +208,20 @@ export function TerminalReceiptForm({
         notes: formData.notes || undefined,
       });
 
-      setFormData({
-        terminal_volume: "",
-        terminal_name: "",
-        operator_name: "",
-        notes: "",
-      });
-      setSelectedMonthOffset(0);
-      setValidationError("");
+      // Only clear form if submission succeeded
+      if (success) {
+        setFormData({
+          terminal_volume: "",
+          terminal_name: "",
+          operator_name: "",
+          notes: "",
+        });
+        setSelectedMonthOffset(0);
+      }
+      // If not successful, error is already set by the hook and will be displayed
     } catch (error: any) {
-      setValidationError(
-        error.response?.data?.detail || "Failed to submit terminal receipt"
-      );
+      // This catches any unexpected errors not handled by the hook
+      console.error("Unexpected error in form submission:", error);
     } finally {
       setLoading(false);
     }

@@ -15,11 +15,13 @@ export const FILTER_FIELDS = [
     type: "select",
     condition: (props: ProductionFiltersProps) =>
       (props.showPartnerFilter && props?.partners?.length) || 0 > 0,
-    options: (props: ProductionFiltersProps) =>
-      props?.partners?.map((p) => ({
+    options: (props: ProductionFiltersProps) => [
+      { value: "", label: "All Partners" },
+      ...(props?.partners?.map((p) => ({
         value: p.id,
         label: p.organization || p.name,
-      })),
+      })) || []),
+    ],
   },
   {
     key: "status",

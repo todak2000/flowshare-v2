@@ -33,6 +33,8 @@ export const ReconciliationContent: React.FC<ReconciliationContentProps> = ({
     fetchTerminalReceipts,
     handleSubmitTerminalReceipt,
     handleDeleteReceipt,
+    validationError,
+    setValidationError,
   } = useReconciliation(tenantId);
 
   // 2. Download logic is called here
@@ -40,6 +42,7 @@ export const ReconciliationContent: React.FC<ReconciliationContentProps> = ({
 
   // 3. UI state is managed here
   const [showReceiptForm, setShowReceiptForm] = useState(false);
+
   const [selectedReconciliation, setSelectedReconciliation] =
     useState<Reconciliation | null>(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
@@ -49,11 +52,15 @@ export const ReconciliationContent: React.FC<ReconciliationContentProps> = ({
     try {
       await handleSubmitTerminalReceipt(data);
       setShowReceiptForm(false);
-    } catch (error) {
+      setValidationError(null); // Clear error on success
+      return true; // Return success
+    } catch (error: any) {
       console.error("Submission failed, form will stay open", error);
+      // Error is already set by the hook, no need to set it again
+      return false; // Return failure
     }
   };
-
+  
   const handleViewReport = (reconciliation: Reconciliation) => {
     setSelectedReconciliation(reconciliation);
     setReportModalOpen(true);
@@ -70,6 +77,8 @@ export const ReconciliationContent: React.FC<ReconciliationContentProps> = ({
       {currentUser.role === "coordinator" && showReceiptForm && (
         <TerminalReceiptForm
           tenantId={tenantId}
+          validationError={validationError}
+          setValidationError={setValidationError}
           onSubmit={handleSubmitWrapper}
           onCancel={() => setShowReceiptForm(false)}
         />

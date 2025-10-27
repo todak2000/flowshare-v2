@@ -68,12 +68,21 @@ export function ReconciliationsTable({
         );
 
       case "shrinkage":
-        return reconciliation.result ? (
-          <span className="font-mono text-sm text-orange-600">
-            {reconciliation.result.shrinkage_percent.toFixed(2)}%
+        if (!reconciliation.result) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        // Client-side shrinkage calculation fallback (for old reports with incorrect backend calculation)
+        const actualShrinkagePercent =
+          reconciliation.result.shrinkage_percent === 0 &&
+          reconciliation.result.total_gross_volume > 0
+            ? ((reconciliation.result.total_gross_volume - reconciliation.result.total_allocated_volume) /
+                reconciliation.result.total_gross_volume) *
+              100
+            : reconciliation.result.shrinkage_percent;
+        return (
+          <span className="font-mono text-sm text-orange-700 dark:text-orange-400">
+            {actualShrinkagePercent.toFixed(2)}%
           </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
         );
 
       case "completed_at":

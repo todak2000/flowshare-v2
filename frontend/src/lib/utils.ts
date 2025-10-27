@@ -27,7 +27,6 @@ export const formatVolume = (volume: number): string => {
   }).format(volume);
 };
 
-
 // Get last day of month at 23:59:59.999
 export const getLastDayOfMonth = (year: number, monthIndex: number): Date => {
   const date = new Date(year, monthIndex + 1, 0);
@@ -36,7 +35,10 @@ export const getLastDayOfMonth = (year: number, monthIndex: number): Date => {
 };
 
 // Get start/end of month (for API queries)
-export const getMonthRange = (year: number, monthIndex: number): { startDate: Date; endDate: Date } => {
+export const getMonthRange = (
+  year: number,
+  monthIndex: number
+): { startDate: Date; endDate: Date } => {
   const startDate = new Date(year, monthIndex, 1);
   startDate.setHours(0, 0, 0, 0);
   const endDate = new Date(year, monthIndex + 1, 0);
@@ -61,14 +63,20 @@ export const formatReceiptDisplayDate = (date: Date): string => {
 };
 
 // Generate last 12 months (offset-based)
-export const getPast12MonthsOptions = (): { value: number; label: string }[] => {
+export const getPast12MonthsOptions = (): {
+  value: number;
+  label: string;
+}[] => {
   const now = new Date();
   return Array.from({ length: 12 }, (_, i) => {
     const offset = -i;
     const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
     return {
       value: offset,
-      label: date.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      label: date.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      }),
     };
   });
 };
@@ -88,7 +96,7 @@ export const formatDateToISO = (dateString: string): string => {
 };
 
 export const formatLimit = (value: number): string => {
-  return value === -1 ? 'Unlimited' : value.toString();
+  return value === -1 ? "Unlimited" : value.toString();
 };
 
 export const formatLocalDate = (date: Date): string => {
@@ -96,4 +104,51 @@ export const formatLocalDate = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+/**
+ * Removes Markdown HTML code fences (like ```html) from the
+ * beginning and end of a string.
+ *
+ * @param {string} inputString The string containing the code-fenced HTML.
+ * @returns {string} The cleaned HTML string, ready for rendering.
+ */
+export const cleanHtmlString = (inputString: string) => {
+  if (typeof inputString !== "string") {
+    console.warn("cleanHtmlString received a non-string input:", inputString);
+    return ""; // Return an empty string for non-string inputs
+  }
+
+  // Chain the replace calls to clean both ends of the string
+  return inputString
+    .replace(/^```html\s*/, "") // Remove the starting ```html and any following whitespace
+    .replace(/\s*```$/, ""); // Remove the closing ``` and any preceding whitespace
+};
+
+/**
+ * Format date as "6th Oct" or "6th Oct 2025"
+ */
+export const formatShortDate = (date: Date | string, includeYear: boolean = false): string => {
+  const d = typeof date === "string" ? new Date(date) : date;
+
+  const day = d.getDate();
+  const suffix =
+    day === 1 || day === 21 || day === 31 ? "st" :
+    day === 2 || day === 22 ? "nd" :
+    day === 3 || day === 23 ? "rd" : "th";
+
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+  const year = d.getFullYear();
+
+  if (includeYear) {
+    return `${day}${suffix} ${month} ${year}`;
+  }
+  return `${day}${suffix} ${month}`;
+};
+
+/**
+ * Format number with commas (no decimals)
+ */
+export const formatVolumeWithCommas = (volume: number): string => {
+  return Math.round(volume).toLocaleString("en-US");
 };

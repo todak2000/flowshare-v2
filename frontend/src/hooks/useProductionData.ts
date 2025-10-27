@@ -118,6 +118,8 @@ export function useProductionData(user: UserProfile) {
         tenant_id: tenantId,
         ...(filters.start_date && { start_date: filters.start_date }),
         ...(filters.end_date && { end_date: filters.end_date }),
+        ...(filters.partner_id && { partner_id: filters.partner_id }),
+        ...(filters.status && { status: filters.status }),
       });
       const data = await apiClient.get<ProductionStats[]>(`/api/production/stats?${params}`);
       setStats(data);
@@ -126,7 +128,7 @@ export function useProductionData(user: UserProfile) {
     } finally {
       setStatsLoading(false);
     }
-  }, [filters.start_date, filters.end_date, tenantId]);
+  }, [filters.start_date, filters.end_date, filters.partner_id, filters.status, tenantId]);
 
   // --- Effects to trigger fetching ---
   React.useEffect(() => {

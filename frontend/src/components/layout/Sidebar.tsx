@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Sparkles,
+  BrainCircuit,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { UserProfile } from "@/store/auth-store";
@@ -35,12 +36,14 @@ const navItems = [
   },
   { href: "/dashboard/team", icon: Users, label: "Team" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/dashboard/flowsharegpt", icon: BrainCircuit, label: "FlowshareGPT" },
 ];
 
 const operatorNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/production", icon: Database, label: "Production Data" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/dashboard/flowsharegpt", icon: BrainCircuit, label: "FlowshareGPT" },
 ];
 
 const settingsItems = [

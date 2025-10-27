@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@theme {
+  --color-scheme: dark; /* This tells Tailwind you are using the 'class' strategy */
+}
 /* Tailwind v4 Theme Configuration - Modern Professional Palette */
 @theme {
   /* Color Palette - Light Mode */

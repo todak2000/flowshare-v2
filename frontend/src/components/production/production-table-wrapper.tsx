@@ -1,17 +1,22 @@
 import * as React from "react";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { ProductionEntry, ProductionFilters } from "@/types/production";
+import { formatShortDate } from "@/lib/utils";
 
 // Helper function
 const getFilterDescription = (filters: ProductionFilters): string => {
-  // ... (Your exact getFilterDescription logic) ...
   if (!filters.start_date && !filters.end_date) {
     return "All Production Entries";
   }
   const startDate = filters.start_date ? new Date(filters.start_date) : null;
   const endDate = filters.end_date ? new Date(filters.end_date) : null;
+
   if (startDate && endDate) {
-    return `Production Entries from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`;
+    const isSameYear = startDate.getFullYear() === endDate.getFullYear();
+    const startFormatted = formatShortDate(startDate, false);
+    const endFormatted = formatShortDate(endDate, true);
+
+    return `Production Entries from ${startFormatted} to ${endFormatted}`;
   }
   return "Production Entries";
 };
