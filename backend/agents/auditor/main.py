@@ -13,9 +13,13 @@ from shared.config import settings
 from shared.database import get_firestore, FirestoreCollections
 from shared.pubsub import publish_entry_flagged
 from shared.models.production import ProductionEntryStatus
+from shared.ai import GeminiService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize Gemini service
+gemini_service = GeminiService()
 
 
 async def validate_entry(entry_id: str, tenant_id: str, partner_id: str, entry_data: dict = None):
@@ -133,11 +137,59 @@ async def validate_entry(entry_id: str, tenant_id: str, partner_id: str, entry_d
 
         is_anomaly = len(anomaly_flags) > 0 or anomaly_score > 60
 
+        # Generate AI analysis if flagged
+        ai_analysis = None
         if is_anomaly:
             logger.warning(
                 f"Entry {entry_id} flagged: score={anomaly_score:.1f}, "
                 f"flags={len(anomaly_flags)}, reasons={anomaly_flags[:3]}"
             )
+
+            # Prepare acceptable ranges for AI context
+            acceptable_ranges = {
+                "bsw_percent": (0, 30),
+                "temperature": (32, 200),
+                "api_gravity": (10, 50),
+                "meter_factor": (0.8, 1.2),
+                "gross_volume": (0, 100000)
+            }
+
+            # Determine which fields were flagged
+            flagged_fields = []
+            if current_bsw > 30:
+                flagged_fields.append("BSW%")
+            if current_temp < 32 or current_temp > 200:
+                flagged_fields.append("Temperature")
+            if current_meter_factor < 0.8 or current_meter_factor > 1.2:
+                flagged_fields.append("Meter Factor")
+            if current_volume > 100000:
+                flagged_fields.append("Gross Volume")
+            if any("API gravity" in flag for flag in anomaly_flags):
+                flagged_fields.append("API Gravity")
+
+            # Get partner name for context
+            try:
+                users_ref = db.collection(FirestoreCollections.USERS)
+                partner_doc = await users_ref.document(partner_id).get()
+                partner_name = "Unknown Partner"
+                if partner_doc.exists:
+                    partner_data = partner_doc.to_dict()
+                    partner_name = partner_data.get("organization") or partner_data.get("full_name", "Unknown Partner")
+
+                # Add partner name to entry data for AI analysis
+                entry_data_with_name = {**entry_data, "partner_name": partner_name}
+
+                # Generate AI analysis
+                logger.info(f"Generating AI analysis for flagged entry {entry_id}")
+                ai_analysis = await gemini_service.analyze_flagged_production(
+                    entry_data=entry_data_with_name,
+                    acceptable_ranges=acceptable_ranges,
+                    flagged_fields=flagged_fields or ["General anomaly"]
+                )
+                logger.info(f"AI analysis generated for entry {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to generate AI analysis for entry {entry_id}: {e}")
+                ai_analysis = None
 
         # Update entry
         update_data = {
@@ -146,6 +198,10 @@ async def validate_entry(entry_id: str, tenant_id: str, partner_id: str, entry_d
             "validation_notes": " | ".join(anomaly_flags) if anomaly_flags else "Validated - no anomalies detected",
             "updated_at": datetime.now(timezone.utc),
         }
+
+        # Add AI analysis if generated
+        if ai_analysis:
+            update_data["ai_analysis"] = ai_analysis
 
         await entries_ref.document(entry_id).update(update_data)
         logger.info(f"Entry {entry_id} validated: status={update_data['status']}, score={anomaly_score:.1f}")

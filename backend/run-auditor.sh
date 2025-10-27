@@ -10,3 +10,6 @@ cd agents/auditor
 echo "🔍 Starting Auditor Agent on http://localhost:8001"
 echo ""
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+
+source venv/bin/activate && cd agents/auditor && python3 main.py

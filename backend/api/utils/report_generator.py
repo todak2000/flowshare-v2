@@ -68,7 +68,7 @@ def download_logo(logo_url: str) -> str:
         return None
 
 
-def generate_pdf_report(reconciliation_id: str, reconciliation_data: Dict, result: Dict, logo_url: str = None) -> bytes:
+def generate_pdf_report(reconciliation_id: str, reconciliation_data: Dict, result: Dict, logo_url: str = None, ai_analysis: str = None) -> bytes:
     """Generate professional PDF report matching sample design."""
     try:
         from reportlab.lib import colors
@@ -79,6 +79,8 @@ def generate_pdf_report(reconciliation_id: str, reconciliation_data: Dict, resul
         from reportlab.platypus.flowables import HRFlowable
         from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
         from reportlab.pdfgen import canvas
+        from html.parser import HTMLParser
+        import re
     except ImportError:
         raise ImportError("reportlab package is required for PDF generation")
 
@@ -282,6 +284,33 @@ def generate_pdf_report(reconciliation_id: str, reconciliation_data: Dict, resul
 
     elements.append(Paragraph(summary_text, body_style))
     elements.append(Spacer(1, 0.3*inch))
+
+    # AI Analysis Section (if available)
+    if ai_analysis:
+        elements.append(Paragraph("Comprehensive Analysis", heading_style))
+
+        # Clean HTML tags from AI analysis
+        # Convert basic HTML to plain text with formatting
+        ai_text = ai_analysis
+        # Remove HTML tags but preserve structure
+        ai_text = re.sub(r'<h2[^>]*>(.*?)</h2>', r'\n\n\1\n', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<h3[^>]*>(.*?)</h3>', r'\n\1:\n', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n\n', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<li[^>]*>(.*?)</li>', r'  • \1\n', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<ul[^>]*>|</ul>', '', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<ol[^>]*>|</ol>', '', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<strong[^>]*>(.*?)</strong>', r'\1', ai_text, flags=re.IGNORECASE)
+        ai_text = re.sub(r'<[^>]+>', '', ai_text)  # Remove remaining tags
+        ai_text = re.sub(r'\n\n+', '\n\n', ai_text)  # Clean up extra newlines
+        ai_text = ai_text.strip()
+
+        # Split into paragraphs and add to PDF
+        paragraphs = ai_text.split('\n\n')
+        for para in paragraphs:
+            if para.strip():
+                elements.append(Paragraph(para.strip(), body_style))
+
+        elements.append(Spacer(1, 0.3*inch))
 
     # Partner Allocations Table
     allocation_table_data = [

@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     bq_reconciliation_table: str = "reconciliation_results"
 
     # Vertex AI
-    vertex_ai_location: str = "us-central1"
+    vertex_ai_location: str = "europe-west1"
     vertex_ai_anomaly_endpoint: str = ""
     vertex_ai_forecast_endpoint: str = ""
 
@@ -55,6 +55,11 @@ class Settings(BaseSettings):
 
     # Frontend URL
     app_url: str = "http://localhost:3000"
+
+    # Gemini AI
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash-exp"  # Main model for analysis
+    gemini_flash_model: str = "gemini-2.5-flash"  # Fast model for chat
 
     # Environment
     environment: str = "development"

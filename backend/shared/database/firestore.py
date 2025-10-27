@@ -84,3 +84,4 @@ class FirestoreCollections:
     TERMINAL_RECEIPTS = "terminal_receipts"
     API_KEYS = "api_keys"
     PARTNERS = "partners"
+    AUDIT_LOGS = "audit_logs"

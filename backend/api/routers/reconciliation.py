@@ -168,11 +168,13 @@ async def export_reconciliation_pdf(
         from utils.report_generator import generate_pdf_report
         from shared.config import settings
 
+        ai_analysis = reconciliation_data.get("ai_analysis")
         pdf_content = generate_pdf_report(
             reconciliation_id,
             reconciliation_data,
             result,
-            logo_url=settings.logo_url
+            logo_url=settings.logo_url,
+            ai_analysis=ai_analysis
         )
 
         # Return as downloadable file

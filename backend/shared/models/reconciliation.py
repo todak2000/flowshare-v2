@@ -66,6 +66,7 @@ class Reconciliation(ReconciliationBase):
     triggered_by: str
     status: ReconciliationStatus = ReconciliationStatus.PENDING
     result: Optional[ReconciliationResult] = None
+    ai_analysis: Optional[str] = None  # AI-generated comprehensive analysis (HTML format)
     error_message: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None

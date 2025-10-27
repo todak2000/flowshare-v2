@@ -15,9 +15,13 @@ from shared.pubsub import publish_reconciliation_complete
 from shared.models.reconciliation import ReconciliationStatus, ReconciliationResult, PartnerAllocation
 from shared.models.production import ProductionEntryStatus
 from allocation_engine import AllocationEngine, ProductionData
+from shared.ai import GeminiService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize Gemini service
+gemini_service = GeminiService()
 
 
 async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
@@ -186,8 +190,9 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
         total_gross = sum(r.gross_volume for r in allocation_results)
         total_net_standard = sum(r.net_volume_standard for r in allocation_results)
         total_allocated = sum(r.allocated_volume for r in allocation_results)
-        shrinkage = terminal_volume - total_allocated
-        shrinkage_percent = (shrinkage / terminal_volume * 100) if terminal_volume > 0 else 0
+        # Shrinkage = (Total Production Volume - Total Allocated) / Total Production Volume * 100
+        shrinkage = total_gross - total_allocated
+        shrinkage_percent = (shrinkage / total_gross * 100) if total_gross > 0 else 0
 
         # Create partner allocations
         partner_allocations = []
@@ -220,12 +225,32 @@ async def perform_reconciliation(reconciliation_id: str, tenant_id: str):
             allocation_model_used=allocation_model,
         )
 
+        # Generate AI analysis for reconciliation
+        ai_analysis = None
+        try:
+            logger.info(f"Generating AI analysis for reconciliation {reconciliation_id}")
+            result_dict = reconciliation_result.model_dump()
+            ai_analysis = await gemini_service.analyze_reconciliation(
+                reconciliation_data=reconciliation_data,
+                result=result_dict
+            )
+            logger.info(f"AI analysis generated for reconciliation {reconciliation_id}")
+        except Exception as e:
+            logger.error(f"Failed to generate AI analysis for reconciliation {reconciliation_id}: {e}")
+            ai_analysis = None
+
         # Save results
-        await reconciliations_ref.document(reconciliation_id).update({
+        update_payload = {
             "status": ReconciliationStatus.COMPLETED.value,
             "result": reconciliation_result.model_dump(),
             "completed_at": datetime.now(timezone.utc), # ✅ Use timezone-aware datetime
-        })
+        }
+
+        # Add AI analysis if generated
+        if ai_analysis:
+            update_payload["ai_analysis"] = ai_analysis
+
+        await reconciliations_ref.document(reconciliation_id).update(update_payload)
 
         logger.info(f"Reconciliation {reconciliation_id} completed successfully")
 

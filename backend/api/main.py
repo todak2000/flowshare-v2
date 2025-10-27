@@ -21,7 +21,10 @@ from routers import (
     analytics,
     forecasts,
     partners,
-    demo
+    demo,
+    flowsharegpt,
+    audit,
+    dashboard
 )
 
 # Configure logging
@@ -94,6 +97,9 @@ app.include_router(terminal_receipts.router, prefix="/api/terminal-receipts", ta
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
 app.include_router(partners.router, prefix="/api/partners", tags=["Partners"])
+app.include_router(flowsharegpt.router, prefix="/api/flowsharegpt", tags=["FlowshareGPT"])
+app.include_router(audit.router, prefix="/api", tags=["Audit Logs"])
+app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
 app.include_router(demo.router, prefix="/api", tags=["Demo/Admin - No Auth"])
 
 

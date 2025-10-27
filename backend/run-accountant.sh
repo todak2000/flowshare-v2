@@ -10,3 +10,5 @@ cd agents/accountant
 echo "🧮 Starting Accountant Agent on http://localhost:8002"
 echo ""
 uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+
+source venv/bin/activate && cd agents/accountant && python3 main.py

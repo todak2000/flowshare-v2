@@ -58,6 +58,7 @@ class ProductionEntry(ProductionEntryBase):
     status: ProductionEntryStatus = ProductionEntryStatus.PENDING
     validation_notes: Optional[str] = None
     anomaly_score: Optional[float] = None
+    ai_analysis: Optional[str] = None  # AI-generated analysis for flagged entries (HTML format)
     created_at: datetime
     updated_at: datetime
     approved_by: Optional[str] = None

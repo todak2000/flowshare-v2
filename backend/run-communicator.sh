@@ -10,3 +10,5 @@ cd agents/communicator
 echo "📧 Starting Communicator Agent on http://localhost:8003"
 echo ""
 uvicorn main:app --host 0.0.0.0 --port 8003 --reload
+
+source venv/bin/activate && cd agents/communicator && python3 main.py

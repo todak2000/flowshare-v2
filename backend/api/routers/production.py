@@ -17,6 +17,8 @@ from shared.models.production import (
     ProductionEntryStatus,
     ProductionStats
 )
+from shared.models.audit_log import AuditAction
+from shared.utils.audit_logger import log_audit_event
 from typing import List, Optional, Dict
 from pydantic import BaseModel
 
@@ -84,6 +86,32 @@ async def create_production_entry(
 
     # Save to Firestore
     await db.collection(FirestoreCollections.PRODUCTION_ENTRIES).document(entry_id).set(entry_doc)
+
+    # Log audit event
+    try:
+        # Get user info for audit log
+        users_ref = db.collection(FirestoreCollections.USERS)
+        user_query = await users_ref.where("firebase_uid", "==", user_id).limit(1).get()
+        user_data = user_query[0].to_dict() if user_query else {}
+        user_email = user_data.get("email")
+        user_name = user_data.get("full_name")
+
+        await log_audit_event(
+            tenant_id=entry_data.tenant_id,
+            user_id=user_id,
+            action=AuditAction.PRODUCTION_ENTRY_CREATED,
+            resource_type="production_entry",
+            resource_id=entry_id,
+            user_email=user_email,
+            user_name=user_name,
+            details={
+                "gross_volume": entry_data.gross_volume,
+                "measurement_date": entry_data.measurement_date.isoformat() if hasattr(entry_data.measurement_date, 'isoformat') else str(entry_data.measurement_date),
+                "status": ProductionEntryStatus.PENDING.value,
+            }
+        )
+    except Exception as e:
+        print(f"⚠️  Failed to log audit event: {e}")
 
     # Publish event to Pub/Sub for auditor agent processing
     try:
