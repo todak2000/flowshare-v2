@@ -28,6 +28,7 @@ router = APIRouter()
 class ProductionEntriesResponse(BaseModel):
     """Response model for paginated production entries."""
     entries: List[ProductionEntry]
+    allEntries: List[ProductionEntry]
     total: int
     page: int
     page_size: int
@@ -226,6 +227,7 @@ async def list_production_entries(
 
     return ProductionEntriesResponse(
         entries=paginated_entries,
+        allEntries=all_entries,
         total=total_count,
         page=page,
         page_size=page_size
