@@ -38,14 +38,14 @@ const navItems = [
     label: "Reconciliation",
   },
   { href: "/dashboard/team", icon: Users, label: "Team" },
-  { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  // { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/flowsharegpt", icon: BrainCircuit, label: "FlowshareGPT" },
 ];
 
 const operatorNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/production", icon: Database, label: "Production Data" },
-  { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  // { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/flowsharegpt", icon: BrainCircuit, label: "FlowshareGPT" },
 ];
 

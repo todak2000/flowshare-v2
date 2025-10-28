@@ -166,3 +166,17 @@ export const formatDetailError = (detail: any) => {
     return 'Validation error';
   }
 }
+
+export const getCSSVar = (name: string): string => {
+  if (typeof document === "undefined") {
+    // Default light-mode 'border' color as fallback for SSR/testing
+    return "240 5.9% 90%"
+  }
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim()
+      .replace("hsl(", "")
+      .replace(")", "") || "240 5.9% 90%" // Fallback
+  )
+}
