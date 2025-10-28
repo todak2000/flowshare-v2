@@ -11,17 +11,23 @@ import {
 // --- Helper to format date ---
 const formatLocalDate = (date: Date) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 // --- Hook Definition ---
-export function useProductionData(user: UserProfile, environment: "test" | "production" = "production") {
+export function useProductionData(
+  user: UserProfile,
+  environment: "test" | "production" = "production"
+) {
   // --- Data State ---
   const [entries, setEntries] = React.useState<ProductionEntry[]>([]);
+  const [chartEntries, setChartEntries] = React.useState<ProductionEntry[]>([]);
   const [stats, setStats] = React.useState<ProductionStats[]>([]);
-  const [partners, setPartners] = React.useState<Array<{ id: string; name: string; organization?: string }>>([]);
+  const [partners, setPartners] = React.useState<
+    Array<{ id: string; name: string; organization?: string }>
+  >([]);
 
   // --- Loading State ---
   const [loading, setLoading] = React.useState(true);
@@ -54,7 +60,9 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
   const fetchPartners = React.useCallback(async () => {
     if (userRole !== "coordinator" || !tenantId) return;
     try {
-      const data = await apiClient.get<any[]>(`/api/partners?tenant_id=${tenantId}`);
+      const data = await apiClient.get<any[]>(
+        `/api/partners?tenant_id=${tenantId}`
+      );
       const mappedPartners = data
         .filter((p) => p.role === "partner")
         .map((p) => ({
@@ -86,21 +94,25 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
 
       const data = await apiClient.get<{
         entries: ProductionEntry[];
+        allEntries: ProductionEntry[];
         total: number;
         page: number;
         page_size: number;
       }>(`/api/production/entries?${params}`);
 
       setEntries(data.entries);
+      setChartEntries(data.allEntries);
       setTotalItems(data.total);
 
       // Check for today's entry
       if (userRole === "field_operator" && user.partner_id) {
         const todayStr = formatLocalDate(new Date());
-        const todayEntry = data.entries.find(entry => {
+        const todayEntry = data.entries.find((entry) => {
           const entryDate = new Date(entry.measurement_date);
           const entryDateStr = formatLocalDate(entryDate);
-          return entryDateStr === todayStr && entry.partner_id === user.partner_id;
+          return (
+            entryDateStr === todayStr && entry.partner_id === user.partner_id
+          );
         });
         setHasTodayEntry(!!todayEntry);
       }
@@ -109,7 +121,15 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters, tenantId, userRole, user.partner_id, environment]);
+  }, [
+    page,
+    pageSize,
+    filters,
+    tenantId,
+    userRole,
+    user.partner_id,
+    environment,
+  ]);
 
   const fetchStats = React.useCallback(async () => {
     if (!tenantId) return;
@@ -123,14 +143,23 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
         ...(filters.partner_id && { partner_id: filters.partner_id }),
         ...(filters.status && { status: filters.status }),
       });
-      const data = await apiClient.get<ProductionStats[]>(`/api/production/stats?${params}`);
+      const data = await apiClient.get<ProductionStats[]>(
+        `/api/production/stats?${params}`
+      );
       setStats(data);
     } catch (error) {
       console.error("Failed to fetch production stats:", error);
     } finally {
       setStatsLoading(false);
     }
-  }, [filters.start_date, filters.end_date, filters.partner_id, filters.status, tenantId, environment]);
+  }, [
+    filters.start_date,
+    filters.end_date,
+    filters.partner_id,
+    filters.status,
+    tenantId,
+    environment,
+  ]);
 
   // --- Effects to trigger fetching ---
   React.useEffect(() => {
@@ -157,7 +186,11 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
     fetchStats();
   };
 
-  const handleSaveEdit = async (entryId: string, updates: any, editReason: string) => {
+  const handleSaveEdit = async (
+    entryId: string,
+    updates: any,
+    editReason: string
+  ) => {
     await apiClient.patch(`/api/production/entries/${entryId}`, {
       ...updates,
       edit_reason: editReason,
@@ -182,6 +215,7 @@ export function useProductionData(user: UserProfile, environment: "test" | "prod
   // --- Return all state and handlers ---
   return {
     entries,
+    chartEntries,
     stats,
     partners,
     loading,

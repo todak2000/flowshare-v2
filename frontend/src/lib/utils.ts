@@ -88,7 +88,9 @@ export function formatMonth(date: string | Date): string {
 export const formatVolumeMbbls = (volume: number): string => {
   return formatVolume(volume / 1000);
 };
-
+export const formatVolumeMMbbls = (volume: number): string => {
+  return formatVolume(volume / 1000000);
+};
 export const formatDateToISO = (dateString: string): string => {
   const date = new Date(dateString);
   date.setUTCHours(0, 0, 0, 0);
