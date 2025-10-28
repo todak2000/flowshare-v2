@@ -58,7 +58,7 @@ export function CreateApiKeyDialog({
             <div className="space-y-4">
               <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
                   <div className="flex-1 space-y-2">
                     <p className="font-semibold">API Key Created Successfully!</p>
                     <p className="text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export function CreateApiKeyDialog({
 
               <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <Shield className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-sm">Security Reminders</p>
                     <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
@@ -149,7 +149,7 @@ export function CreateApiKeyDialog({
               <div className="flex gap-2 pt-2">
                 <Button
                   onClick={handleCreateKey}
-                  disabled={creating || !newKeyData.name.trim()}
+                  disabled={creating || !newKeyData?.name?.trim()}
                   className="flex-1"
                 >
                   {creating ? "Creating..." : "Create API Key"}

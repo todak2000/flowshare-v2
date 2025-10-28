@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, CheckCircle, AlertCircle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, CheckCircle, AlertCircle } from "lucide-react";
 
 export function SecurityBestPractices() {
   return (
@@ -20,11 +20,15 @@ export function SecurityBestPractices() {
               Do
             </h4>
             <ul className="space-y-1 text-muted-foreground list-disc list-inside">
-              <li>Store API keys in environment variables</li>
-              <li>Use test keys during development</li>
-              <li>Rotate production keys periodically</li>
-              <li>Monitor API key usage in the logs</li>
-              <li>Revoke unused or compromised keys immediately</li>
+              {[
+                "Store API keys in environment variables",
+                "Use test keys during development",
+                "Rotate production keys periodically",
+                "Monitor API key usage in the logs",
+                "Revoke unused or compromised keys immediately",
+              ].map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           </div>
           <div className="space-y-2">
@@ -33,15 +37,19 @@ export function SecurityBestPractices() {
               Don't
             </h4>
             <ul className="space-y-1 text-muted-foreground list-disc list-inside">
-              <li>Never commit API keys to version control</li>
-              <li>Don't share keys via email or chat</li>
-              <li>Don't use production keys for testing</li>
-              <li>Don't hardcode keys in your application</li>
-              <li>Don't reuse keys across environments</li>
+              {[
+                "Never commit API keys to version control",
+                "Don't share keys via email or chat",
+                "Don't use production keys for testing",
+                "Don't hardcode keys in your application",
+                "Don't reuse keys across environments",
+              ].map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
