@@ -345,6 +345,20 @@ async def get_current_user(
     # Add last_login_at to response
     user_data["last_login_at"] = now
 
+    # Fetch tenant's subscription plan
+    tenant_ids = user_data.get("tenant_ids", [])
+    if tenant_ids:
+        try:
+            tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_ids[0]).get()
+            if tenant_doc.exists:
+                tenant_data = tenant_doc.to_dict()
+                user_data["subscription_plan"] = tenant_data.get("subscription_plan", "starter")
+        except Exception as e:
+            print(f"Warning: Failed to fetch tenant subscription plan: {e}")
+            user_data["subscription_plan"] = "starter"
+    else:
+        user_data["subscription_plan"] = "starter"
+
     return User(id=users[0].id, **user_data)
 
 

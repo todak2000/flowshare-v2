@@ -147,13 +147,20 @@ async def list_production_entries(
     max_temperature: Optional[float] = Query(None),
     min_bsw: Optional[float] = Query(None),
     max_bsw: Optional[float] = Query(None),
+    environment: Optional[str] = Query("production", description="Environment: 'test' or 'production'"),
     user_id: str = Depends(get_current_user_id),
 ):
     """List production entries with filters and pagination. Role-based access control applied."""
     db = get_firestore()
     role, user_partner_id, _ = await get_user_role_and_partner(user_id)
 
-    entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
+    # Determine collection based on environment
+    collection_name = (
+        FirestoreCollections.PRODUCTION_ENTRIES_TEST
+        if environment == "test"
+        else FirestoreCollections.PRODUCTION_ENTRIES
+    )
+    entries_ref = db.collection(collection_name)
 
     # Build base query
     query = entries_ref.where("tenant_id", "==", tenant_id)
@@ -341,13 +348,20 @@ async def get_production_stats(
     tenant_id: str = Query(...),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    environment: Optional[str] = Query("production", description="Environment: 'test' or 'production'"),
     user_id: str = Depends(get_current_user_id),
 ):
     """Get production statistics by partner with percentage calculations. Role-based views."""
     db = get_firestore()
     role, user_partner_id, _ = await get_user_role_and_partner(user_id)
 
-    entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
+    # Determine collection based on environment
+    collection_name = (
+        FirestoreCollections.PRODUCTION_ENTRIES_TEST
+        if environment == "test"
+        else FirestoreCollections.PRODUCTION_ENTRIES
+    )
+    entries_ref = db.collection(collection_name)
 
     # Build query
     query = entries_ref.where("tenant_id", "==", tenant_id)

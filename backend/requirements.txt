@@ -25,6 +25,9 @@ python-dotenv==1.0.0
 openpyxl==3.1.2
 reportlab==4.0.7
 
+# Scientific computing (for forecasting)
+numpy==1.26.2
+
 # HTTP client
 httpx==0.25.2
 

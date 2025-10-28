@@ -24,7 +24,9 @@ from routers import (
     demo,
     flowsharegpt,
     audit,
-    dashboard
+    dashboard,
+    scada,
+    api_keys,
 )
 
 # Configure logging
@@ -64,7 +66,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-print(settings.cors_origins_list, 'settings.cors_origins_listgfhjkljhg')
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -101,6 +103,8 @@ app.include_router(flowsharegpt.router, prefix="/api/flowsharegpt", tags=["Flows
 app.include_router(audit.router, prefix="/api", tags=["Audit Logs"])
 app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
 app.include_router(demo.router, prefix="/api", tags=["Demo/Admin - No Auth"])
+app.include_router(scada.router, prefix="/api/scada", tags=["SCADA API (External)"])
+app.include_router(api_keys.router, prefix="/api/api-keys", tags=["API Key Management"])
 
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
-"""Analytics routes."""
+"""Analytics routes using Firebase (plan-restricted)."""
 from fastapi import APIRouter, HTTPException, Depends, Query
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import sys
 from typing import List, Dict, Any
+from collections import defaultdict
 
 sys.path.append("../..")
 
-from shared.auth import get_current_user_id
-from google.cloud import bigquery
+from shared.auth import get_current_user_id, require_plan
+from shared.database import get_firestore, FirestoreCollections
 
 router = APIRouter()
 
@@ -18,61 +19,63 @@ async def get_production_trends(
     partner_id: str = Query(None),
     days: int = Query(30, ge=1, le=365),
     user_id: str = Depends(get_current_user_id),
+    _plan_check: str = Depends(require_plan(['professional', 'enterprise'])),
 ) -> Dict[str, Any]:
     """
-    Get production trends from BigQuery.
+    Get production trends from Firebase.
 
     Returns time-series data for production volumes.
+
+    **Requires Professional or Enterprise plan.**
     """
     try:
-        client = bigquery.Client()
+        db = get_firestore()
 
-        # Build query based on filters
-        query = f"""
-        SELECT
-            DATE(measurement_date) as date,
-            partner_id,
-            SUM(gross_volume) as total_gross_volume,
-            AVG(bsw_percent) as avg_bsw,
-            AVG(api_gravity) as avg_api_gravity
-        FROM `flowshare-v2.flowshare_analytics.production_data`
-        WHERE tenant_id = @tenant_id
-        AND measurement_date >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY)
-        """
+        # Calculate date range
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+
+        # Build query
+        entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
+        query = entries_ref.where("tenant_id", "==", tenant_id)\
+                          .where("measurement_date", ">=", start_date)\
+                          .order_by("measurement_date", direction="DESCENDING")
 
         if partner_id:
-            query += " AND partner_id = @partner_id"
+            query = query.where("partner_id", "==", partner_id)
 
-        query += """
-        GROUP BY date, partner_id
-        ORDER BY date DESC
-        """
+        # Execute query
+        entries = await query.get()
 
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("tenant_id", "STRING", tenant_id),
-                bigquery.ScalarQueryParameter("days", "INT64", days),
-            ]
-        )
+        # Aggregate data by date and partner
+        daily_data = defaultdict(lambda: defaultdict(lambda: {
+            "total_gross_volume": 0,
+            "bsw_sum": 0,
+            "api_sum": 0,
+            "count": 0
+        }))
 
-        if partner_id:
-            job_config.query_parameters.append(
-                bigquery.ScalarQueryParameter("partner_id", "STRING", partner_id)
-            )
+        for entry in entries:
+            data = entry.to_dict()
+            date_key = data["measurement_date"].date().isoformat()
+            pid = data.get("partner_id", "unknown")
 
-        query_job = client.query(query, job_config=job_config)
-        results = query_job.result()
+            daily_data[date_key][pid]["total_gross_volume"] += data.get("gross_volume", 0)
+            daily_data[date_key][pid]["bsw_sum"] += data.get("bsw_percent", 0)
+            daily_data[date_key][pid]["api_sum"] += data.get("api_gravity", 0)
+            daily_data[date_key][pid]["count"] += 1
 
         # Format results
         trends = []
-        for row in results:
-            trends.append({
-                "date": row.date.isoformat() if row.date else None,
-                "partner_id": row.partner_id,
-                "total_gross_volume": float(row.total_gross_volume) if row.total_gross_volume else 0,
-                "avg_bsw": float(row.avg_bsw) if row.avg_bsw else 0,
-                "avg_api_gravity": float(row.avg_api_gravity) if row.avg_api_gravity else 0,
-            })
+        for date_key, partners in sorted(daily_data.items(), reverse=True):
+            for pid, values in partners.items():
+                count = values["count"]
+                trends.append({
+                    "date": date_key,
+                    "partner_id": pid,
+                    "total_gross_volume": round(values["total_gross_volume"], 2),
+                    "avg_bsw": round(values["bsw_sum"] / count, 2) if count > 0 else 0,
+                    "avg_api_gravity": round(values["api_sum"] / count, 2) if count > 0 else 0,
+                })
 
         return {
             "tenant_id": tenant_id,
@@ -90,52 +93,44 @@ async def get_analytics_summary(
     tenant_id: str = Query(...),
     partner_id: str = Query(None),
     user_id: str = Depends(get_current_user_id),
+    _plan_check: str = Depends(require_plan(['professional', 'enterprise'])),
 ) -> Dict[str, Any]:
     """
     Get summary analytics for a tenant or partner.
+
+    **Requires Professional or Enterprise plan.**
     """
     try:
-        client = bigquery.Client()
+        db = get_firestore()
 
-        query = """
-        SELECT
-            COUNT(DISTINCT partner_id) as total_partners,
-            COUNT(*) as total_entries,
-            SUM(gross_volume) as total_production,
-            AVG(bsw_percent) as avg_bsw
-        FROM `flowshare-v2.flowshare_analytics.production_data`
-        WHERE tenant_id = @tenant_id
-        """
-
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("tenant_id", "STRING", tenant_id),
-            ]
-        )
+        # Build query
+        entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
+        query = entries_ref.where("tenant_id", "==", tenant_id)
 
         if partner_id:
-            query += " AND partner_id = @partner_id"
-            job_config.query_parameters.append(
-                bigquery.ScalarQueryParameter("partner_id", "STRING", partner_id)
-            )
+            query = query.where("partner_id", "==", partner_id)
 
-        query_job = client.query(query, job_config=job_config)
-        results = list(query_job.result())
+        # Execute query
+        entries = await query.get()
 
-        if not results:
-            return {
-                "total_partners": 0,
-                "total_entries": 0,
-                "total_production": 0,
-                "avg_bsw": 0,
-            }
+        # Calculate summary
+        total_entries = 0
+        total_production = 0
+        bsw_sum = 0
+        partners = set()
 
-        row = results[0]
+        for entry in entries:
+            data = entry.to_dict()
+            total_entries += 1
+            total_production += data.get("gross_volume", 0)
+            bsw_sum += data.get("bsw_percent", 0)
+            partners.add(data.get("partner_id"))
+
         return {
-            "total_partners": row.total_partners,
-            "total_entries": row.total_entries,
-            "total_production": float(row.total_production) if row.total_production else 0,
-            "avg_bsw": float(row.avg_bsw) if row.avg_bsw else 0,
+            "total_partners": len(partners),
+            "total_entries": total_entries,
+            "total_production": round(total_production, 2),
+            "avg_bsw": round(bsw_sum / total_entries, 2) if total_entries > 0 else 0,
         }
 
     except Exception as e:

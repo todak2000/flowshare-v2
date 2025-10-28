@@ -26,13 +26,6 @@ def initialize_firestore() -> firestore.AsyncClient:
         firebase_client_email = settings.firebase_client_email
         firebase_project_id = settings.firebase_project_id or settings.gcp_project_id
 
-        # Debug logging
-        print(f"🔍 Debug - Checking Firebase credentials:")
-        print(f"   FIREBASE_PROJECT_ID: {firebase_project_id}")
-        print(f"   FIREBASE_CLIENT_EMAIL: {firebase_client_email}")
-        print(f"   FIREBASE_PRIVATE_KEY present: {bool(firebase_private_key)}")
-        print(f"   FIREBASE_PRIVATE_KEY length: {len(firebase_private_key) if firebase_private_key else 0}")
-
         if firebase_private_key and firebase_client_email and firebase_project_id:
             # Use service account credentials
             try:
@@ -80,6 +73,7 @@ class FirestoreCollections:
     USERS = "users"
     INVITATIONS = "invitations"
     PRODUCTION_ENTRIES = "production_entries"
+    PRODUCTION_ENTRIES_TEST = "production_entries_test"
     RECONCILIATIONS = "reconciliations"
     TERMINAL_RECEIPTS = "terminal_receipts"
     API_KEYS = "api_keys"

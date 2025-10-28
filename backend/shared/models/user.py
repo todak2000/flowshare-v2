@@ -58,6 +58,7 @@ class User(UserBase):
     updated_at: datetime
     last_login_at: Optional[datetime] = None
     organization: Optional[str] = None
+    subscription_plan: Optional[str] = None  # Tenant's subscription plan
 
     class Config:
         from_attributes = True

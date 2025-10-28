@@ -1,8 +1,8 @@
 """Firebase Authentication middleware and utilities."""
-from fastapi import HTTPException, Security, status
+from fastapi import HTTPException, Security, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -135,3 +135,102 @@ async def get_user_role(token: Dict[str, Any] = Security(verify_firebase_token))
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch user role",
         )
+
+
+async def get_user_tenant_ids(user_id: str) -> List[str]:
+    """
+    Get the user's tenant IDs from Firestore.
+
+    Args:
+        user_id: Firebase UID
+
+    Returns:
+        List of tenant IDs the user belongs to
+    """
+    try:
+        db = _get_db()
+        from ..database import FirestoreCollections
+        from google.cloud.firestore_v1 import FieldFilter
+
+        users_ref = db.collection(FirestoreCollections.USERS)
+        user_query = await users_ref.where(filter=FieldFilter("firebase_uid", "==", user_id)).limit(1).get()
+
+        if not user_query:
+            return []
+
+        user_data = user_query[0].to_dict()
+        return user_data.get("tenant_ids", [])
+    except Exception as e:
+        logger.error(f"Error fetching user tenant IDs: {str(e)}")
+        return []
+
+
+async def get_tenant_subscription_plan(tenant_id: str) -> Optional[str]:
+    """
+    Get the tenant's subscription plan from Firestore.
+
+    Args:
+        tenant_id: Tenant ID
+
+    Returns:
+        Subscription plan string or None if tenant not found
+    """
+    try:
+        db = _get_db()
+        from ..database import FirestoreCollections
+
+        tenant_doc = await db.collection(FirestoreCollections.TENANTS).document(tenant_id).get()
+
+        if not tenant_doc.exists:
+            return None
+
+        tenant_data = tenant_doc.to_dict()
+        return tenant_data.get("subscription_plan", "starter")
+    except Exception as e:
+        logger.error(f"Error fetching tenant subscription plan: {str(e)}")
+        return "starter"
+
+
+def require_plan(allowed_plans: List[str]):
+    """
+    Dependency factory to restrict access based on subscription plan.
+
+    Args:
+        allowed_plans: List of plans that can access this endpoint (e.g., ['professional', 'enterprise'])
+
+    Returns:
+        Async dependency function that checks plan access
+
+    Example:
+        @router.get("/analytics")
+        async def get_analytics(
+            tenant_id: str,
+            user_id: str = Depends(get_current_user_id),
+            _: None = Depends(require_plan(['professional', 'enterprise']))
+        ):
+            ...
+    """
+    async def check_plan(tenant_id: str, user_id: str = Depends(get_current_user_id)):
+        # Get tenant's subscription plan
+        plan = await get_tenant_subscription_plan(tenant_id)
+
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Tenant not found"
+            )
+
+        if plan not in allowed_plans:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "plan_upgrade_required",
+                    "message": f"This feature requires a {' or '.join(allowed_plans)} plan",
+                    "current_plan": plan,
+                    "required_plans": allowed_plans
+                }
+            )
+
+        return plan
+
+    return check_plan
