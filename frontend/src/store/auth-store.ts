@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise'
+
 export interface UserProfile {
   id: string
   email: string
@@ -14,6 +16,7 @@ export interface UserProfile {
   created_at?: string
   updated_at?: string
   notification_settings?: {email_reports: boolean, email_anomaly_alerts: boolean}
+  subscription_plan?: SubscriptionPlan
 }
 
 interface AuthState {
@@ -32,9 +35,12 @@ interface AuthState {
   getTenantId: () => string | null
   getPartnerId: () => string | null
   getUserRole: () => string | null
+  getSubscriptionPlan: () => SubscriptionPlan
   isCoordinator: () => boolean
   isPartner: () => boolean
   isFieldOperator: () => boolean
+  hasAccessToAnalytics: () => boolean
+  hasAccessToForecasting: () => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -80,11 +86,23 @@ export const useAuthStore = create<AuthState>()(
 
       getUserRole: () => get().user?.role ?? null,
 
+      getSubscriptionPlan: () => get().user?.subscription_plan ?? 'starter',
+
       isCoordinator: () => get().user?.role === 'coordinator',
 
       isPartner: () => get().user?.role === 'partner',
 
       isFieldOperator: () => get().user?.role === 'field_operator',
+
+      hasAccessToAnalytics: () => {
+        const plan = get().user?.subscription_plan ?? 'starter'
+        return plan === 'professional' || plan === 'enterprise'
+      },
+
+      hasAccessToForecasting: () => {
+        const plan = get().user?.subscription_plan ?? 'starter'
+        return plan === 'professional' || plan === 'enterprise'
+      },
     }),
     {
       name: 'flowshare-auth-storage', // localStorage key

@@ -16,8 +16,8 @@ export interface WelcomeHeaderProps {
 export function WelcomeHeader({ userName }: WelcomeHeaderProps) {
   return (
     <div>
-      <h1 className="text-4xl font-bold tracking-tight mb-2">
-        Welcome back, {userName}! 👋
+      <h1 className="text-lg font-bold tracking-tight mb-2">
+        Welcome back, <span className="text-primary">{userName}</span>! 👋
       </h1>
       <p className="text-muted-foreground text-lg">
         Here's what's happening with your operations today.

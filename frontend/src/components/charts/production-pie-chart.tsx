@@ -50,7 +50,7 @@ export function ProductionPieChart({
   if (chartData.length === 0) {
     return (
       <div className="flex h-[400px] items-center justify-center rounded-lg border border-border bg-card p-6">
-        <p className="text-muted-foreground">No statistics available</p>
+        <p className="text-muted-foreground text-center text-xs md:text-base">No statistics available</p>
       </div>
     );
   }

@@ -31,9 +31,9 @@ export const ProductionPageHeader: React.FC<ProductionPageHeaderProps> = ({
 }) => {
   return (
     <div className="border-b border-border bg-card px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Production Data</h1>
+      <div className="flex md:flex-row flex-col md:items-center justify-between">
+        <div className="my-2 w-full">
+          <h1 className="text-lg lg:text-2xl font-bold text-foreground">Production Data</h1>
           <p className="text-sm text-muted-foreground">
             {userRole === "coordinator"
               ? "View and manage production data for all partners"

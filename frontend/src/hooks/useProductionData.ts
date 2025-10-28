@@ -17,12 +17,12 @@ const formatLocalDate = (date: Date) => {
 };
 
 // --- Hook Definition ---
-export function useProductionData(user: UserProfile) {
+export function useProductionData(user: UserProfile, environment: "test" | "production" = "production") {
   // --- Data State ---
   const [entries, setEntries] = React.useState<ProductionEntry[]>([]);
   const [stats, setStats] = React.useState<ProductionStats[]>([]);
   const [partners, setPartners] = React.useState<Array<{ id: string; name: string; organization?: string }>>([]);
-  
+
   // --- Loading State ---
   const [loading, setLoading] = React.useState(true);
   const [statsLoading, setStatsLoading] = React.useState(true);
@@ -76,6 +76,7 @@ export function useProductionData(user: UserProfile) {
         tenant_id: tenantId,
         page: page.toString(),
         page_size: pageSize.toString(),
+        environment: environment,
         ...(filters.partner_id && { partner_id: filters.partner_id }),
         ...(filters.status && { status: filters.status }),
         ...(filters.start_date && { start_date: filters.start_date }),
@@ -108,7 +109,7 @@ export function useProductionData(user: UserProfile) {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters, tenantId, userRole, user.partner_id]);
+  }, [page, pageSize, filters, tenantId, userRole, user.partner_id, environment]);
 
   const fetchStats = React.useCallback(async () => {
     if (!tenantId) return;
@@ -116,6 +117,7 @@ export function useProductionData(user: UserProfile) {
     try {
       const params = new URLSearchParams({
         tenant_id: tenantId,
+        environment: environment,
         ...(filters.start_date && { start_date: filters.start_date }),
         ...(filters.end_date && { end_date: filters.end_date }),
         ...(filters.partner_id && { partner_id: filters.partner_id }),
@@ -128,7 +130,7 @@ export function useProductionData(user: UserProfile) {
     } finally {
       setStatsLoading(false);
     }
-  }, [filters.start_date, filters.end_date, filters.partner_id, filters.status, tenantId]);
+  }, [filters.start_date, filters.end_date, filters.partner_id, filters.status, tenantId, environment]);
 
   // --- Effects to trigger fetching ---
   React.useEffect(() => {

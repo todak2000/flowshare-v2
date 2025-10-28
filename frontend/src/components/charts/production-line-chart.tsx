@@ -94,7 +94,7 @@ export function ProductionLineChart({
   if (chartData.length === 0) {
     return (
       <div className="flex h-[400px] items-center justify-center rounded-lg border border-border bg-card">
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-center text-xs md:text-base mx-10 md:mx-0">
           No production data available for chart. Add production entries to see
           trends.
         </p>
@@ -104,9 +104,9 @@ export function ProductionLineChart({
   const toggles = { showGrossVolume, showBSW, showTemperature };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
+    <div className="rounded-lg hidden md:block md:border border-border bg-card md:p-6">
+      <div className="mb-4 flex flex-col md:flex-row space-y-3 md:space-y-0 md:items-center justify-between">
+        <h3 className="text-sm md:text-lg font-semibold text-foreground">
           Production Trends
         </h3>
         <div className="flex gap-2">

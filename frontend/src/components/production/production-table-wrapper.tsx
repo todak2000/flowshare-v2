@@ -45,9 +45,9 @@ export const ProductionDataTableWrapper: React.FC<
   filters,
 }) => {
   return (
-    <div className="flex-1 rounded-lg border border-border bg-card p-6 flex flex-col">
+    <div className="flex-1 rounded-lg md:border border-border bg-card md:p-6 flex flex-col">
       <div className="mb-4 shrink-0">
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-sm md:text-lg font-semibold text-foreground">
           {getFilterDescription(filters)}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">

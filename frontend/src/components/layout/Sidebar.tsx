@@ -14,6 +14,8 @@ import {
   Settings,
   Sparkles,
   BrainCircuit,
+  Plug,
+  BookOpen,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { UserProfile } from "@/store/auth-store";
@@ -51,6 +53,11 @@ const settingsItems = [
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
+const scadaItems = [
+  { href: "/dashboard/scada-setup", icon: Plug, label: "SCADA Setup" },
+  { href: "/dashboard/scada-docs", icon: BookOpen, label: "SCADA Docs" },
+];
+
 export function Sidebar({
   user,
   sidebarOpen,
@@ -68,6 +75,10 @@ export function Sidebar({
   const navSettings = useMemo(() => {
     return role === "coordinator" ? settingsItems : [];
   }, [role]);
+
+  const navScada = useMemo(() => {
+    return ['coordinator', 'partner'].includes(role) ? scadaItems : [];
+  }, [role]);
   return (
     <aside
       className={`fixed left-0 top-0 z-40 h-screen w-72 bg-card border-r border-border transition-transform ${
@@ -76,7 +87,7 @@ export function Sidebar({
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <Logo />
+        <div className="space-y-1 p-4"><Logo /></div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
@@ -89,6 +100,26 @@ export function Sidebar({
               isActive={isActive(item.href)}
             />
           ))}
+
+          {navScada.length > 0 && (
+            <>
+              <Separator className="my-4" />
+              <div className="px-3 py-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  SCADA Integration
+                </p>
+              </div>
+              {navScada.map((item) => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={isActive(item.href)}
+                />
+              ))}
+            </>
+          )}
 
           <Separator className="my-4" />
 

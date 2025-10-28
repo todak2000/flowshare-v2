@@ -152,3 +152,17 @@ export const formatShortDate = (date: Date | string, includeYear: boolean = fals
 export const formatVolumeWithCommas = (volume: number): string => {
   return Math.round(volume).toLocaleString("en-US");
 };
+
+export const formatDetailError = (detail: any) => {
+  if (typeof detail === 'string') {
+    return detail;
+  } else if (Array.isArray(detail)) {
+    const messages = detail.map(err => {
+      const field = err.loc?.slice(1).join('.') || 'field'; // skip 'body' or 'query'
+      return `${err.msg} (${field})`;
+    });
+    return messages.join('; ');
+  } else {
+    return 'Validation error';
+  }
+}

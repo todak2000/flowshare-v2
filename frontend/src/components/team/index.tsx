@@ -100,9 +100,9 @@ export function TeamManagementContent() {
       {/* Main Content */}
       <div className="">
         <header className="border-b border-border bg-background/80 backdrop-blur-lg px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Team Management</h1>
+              <h1 className="text-lg lg:text-2xl font-bold">Team Management</h1>
               <p className="text-sm text-muted-foreground">
                 {currentUser?.role === "partner"
                   ? "Invite and manage your field operators"
@@ -111,7 +111,7 @@ export function TeamManagementContent() {
             </div>
             <Button
               onClick={() => setShowInviteForm(true)}
-              className="bg-primary hover:bg-primary/90 shadow-lg"
+              className="bg-primary hover:bg-primary/90 shadow-lg w-max"
             >
               <UserPlus className="mr-2 h-4 w-4" />
               {currentUser?.role === "partner"
@@ -251,11 +251,11 @@ export function TeamManagementContent() {
                     <h3 className="text-lg font-bold mb-2">
                       Great! You're all set 🎊
                     </h3>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-muted-foreground mb-4 text-xs md:text-base">
                       You've invited {currentPartnerCount} partners. Next,
                       configure your tenant settings or explore the dashboard.
                     </p>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col md:flex-row gap-3">
                       <Link href="/dashboard/settings">
                         <Button className="bg-primary">
                           <SettingsIcon className="mr-2 h-4 w-4" />

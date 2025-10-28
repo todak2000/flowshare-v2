@@ -73,7 +73,7 @@ export function ProductionFiltersComponent({
   const activeFilterCount = Object.values(filters).filter((v) => v !== undefined && v !== "").length;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+    <div className="rounded-lg md:border border-border bg-card md:p-4 space-y-4">
       {/* Filter Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -118,10 +118,10 @@ export function ProductionFiltersComponent({
               {preset.label}
             </Button>
           ))}
-        </div>
+        
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Or select a specific month:</span>
+          <span className="text-xs text-muted-foreground">Or</span>
           <select
             onChange={(e) => setMonthPreset(parseInt(e.target.value))}
             value={activePreset?.startsWith("month_") ? activePreset.replace("month_", "") : ""}
@@ -138,6 +138,7 @@ export function ProductionFiltersComponent({
               );
             })}
           </select>
+        </div>
         </div>
       </div>
 

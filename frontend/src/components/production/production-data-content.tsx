@@ -49,9 +49,10 @@ const getStatusBadge = (status: ProductionEntryStatus) => {
 
 interface ProductionDataContentProps {
   user: UserProfile;
+  environment?: "test" | "production";
 }
 
-export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ user }) => {
+export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ user, environment = "production" }) => {
   // 1. Call the logic hook
   const {
     entries,
@@ -70,7 +71,7 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({ us
     handleSaveEdit,
     handleApprove,
     handleReject,
-  } = useProductionData(user);
+  } = useProductionData(user, environment);
 
   const userRole = user.role;
 
