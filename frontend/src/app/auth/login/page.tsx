@@ -7,21 +7,21 @@ import { auth } from "@/lib/firebase";
 import axios from "axios";
 import { useAuthStore } from "@/store/auth-store";
 import { handleApiError, type AppError } from "@/lib/error-handler";
-
+import { motion, AnimatePresence } from "framer-motion";
+import { Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { EnhancedAuthInput } from "@/components/auth/enhanced-auth-input";
 import { ErrorAlert } from "@/components/ui/alert";
 import { RegistrationSuccessChecker } from "@/components/layout/RegistrationSuccessChecker";
-import { Mail, Lock } from "lucide-react";
-import { AuthCard } from "@/components/auth/auth-card";
-import { AuthHeader } from "@/components/auth/auth-header";
-import { AuthInput } from "@/components/auth/auth-input";
-import { AuthSubmitButton } from "@/components/auth/auth-button";
-import { AuthFooterLink } from "@/components/auth/auth-footer";
+import { normalizeEmail, emailValidationRules } from "@/lib/validation";
+import Link from "next/link";
+import { Logo } from "@/components/layout/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailValid, setEmailValid] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -46,9 +46,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Normalize email before Firebase authentication
+      const normalizedEmail = normalizeEmail(email);
+
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        normalizedEmail,
         password
       );
       const idToken = await userCredential.user.getIdToken();
@@ -97,59 +100,217 @@ export default function LoginPage() {
     }
   };
 
+  const canSubmit = email.length > 0 && password.length > 0 && emailValid;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <AuthCard>
-        <AuthHeader
-          title="Welcome Back"
-          description="Sign in to your FlowShare account"
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Animated background gradients */}
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-400/30 to-transparent rounded-full blur-3xl"
         />
-        <form onSubmit={handleLogin} className="space-y-4 mt-3">
-          <AuthInput
-            id="email"
-            label="Email"
-            type="email"
-            placeholder="you@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            icon={<Mail className="h-4 w-4" />}
-          />
+        <motion.div
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+          className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-400/30 to-transparent rounded-full blur-3xl"
+        />
+      </div>
 
-          <AuthInput
-            id="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            icon={<Lock className="h-4 w-4" />}
-          />
+      {/* Floating particles */}
+      {[...Array(20)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 bg-blue-400/20 rounded-full"
+          animate={{
+            y: [
+              Math.random() * window.innerHeight,
+              Math.random() * window.innerHeight,
+            ],
+            x: [
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerWidth,
+            ],
+            opacity: [0, 1, 0],
+          }}
+          transition={{
+            duration: Math.random() * 10 + 10,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
+      ))}
 
-          <Suspense fallback={null}>
-            <RegistrationSuccessChecker />
-          </Suspense>
+      {/* Main content */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-md px-6"
+      >
+        {/* Glass morphism card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="backdrop-blur-xl bg-white/70 shadow-2xl shadow-blue-500/10 rounded-3xl p-8 border border-white/20"
+        >
+          {/* Logo and header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-center mb-8 flex flex-col  items-center gap-3"
+          >
+            <motion.div whileHover={{ scale: 1.05, rotate: 5 }}>
+              <Logo />
+            </motion.div>
 
-          {error && (
-            <ErrorAlert
-              title={error.title}
-              message={error.message}
-              action={error.action}
-              onClose={() => setError(null)}
+            <p className="text-gray-600 mt-2">
+              Sign in to your FlowShare account
+            </p>
+          </motion.div>
+
+          {/* Form */}
+          <motion.form
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            onSubmit={handleLogin}
+            className="space-y-5"
+          >
+            <EnhancedAuthInput
+              id="email"
+              label="Email Address"
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(value, isValid) => {
+                setEmail(value);
+                setEmailValid(isValid);
+              }}
+              validationRules={emailValidationRules}
+              icon={<Mail className="h-4 w-4" />}
+              required
             />
-          )}
 
-          <AuthSubmitButton loading={loading} loadingText="Signing in...">
-            Sign In
-          </AuthSubmitButton>
+            <EnhancedAuthInput
+              id="password"
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(value) => setPassword(value)}
+              icon={<Lock className="h-4 w-4" />}
+              required
+            />
 
-          <AuthFooterLink
-            href="/auth/register"
-            question="Don't have an account?"
-            label="Sign up"
-          />
-        </form>
-      </AuthCard>
+            <Suspense fallback={null}>
+              <RegistrationSuccessChecker />
+            </Suspense>
+
+            {/* Error alert */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                >
+                  <ErrorAlert
+                    title={error.title}
+                    message={error.message}
+                    action={error.action}
+                    onClose={() => setError(null)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Submit button */}
+            <motion.button
+              type="submit"
+              disabled={!canSubmit || loading}
+              whileHover={{ scale: canSubmit && !loading ? 1.02 : 1 }}
+              whileTap={{ scale: canSubmit && !loading ? 0.98 : 1 }}
+              className="relative w-full mt-6 py-3.5 rounded-xl font-semibold text-white overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {/* Gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-200 group-hover:from-blue-700 group-hover:to-purple-700" />
+
+              {/* Shine effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{
+                  x: loading ? ["-100%", "100%"] : "-100%",
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: loading ? Infinity : 0,
+                  ease: "linear",
+                }}
+              />
+
+              {/* Button content */}
+              <span className="relative flex items-center justify-center gap-2">
+                {loading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </span>
+            </motion.button>
+          </motion.form>
+
+          {/* Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-8 text-center"
+          >
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                href="/auth/register"
+                className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          </motion.div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
