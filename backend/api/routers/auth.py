@@ -14,12 +14,17 @@ from shared.auth import get_current_user_id, get_current_user_email
 from shared.database import get_firestore, FirestoreCollections
 from shared.models.user import User, UserCreate, UserRole
 from shared.models.tenant import Tenant, TenantCreate, SubscriptionPlan, TenantSettings
+from shared.validation import (
+    normalize_email,
+    ValidatedRegisterRequest,
+    ValidatedInviteeRegisterRequest
+)
 
 router = APIRouter()
 
 
 class RegisterRequest(BaseModel):
-    """Registration request payload."""
+    """Registration request payload (for backwards compatibility)."""
     full_name: str
     tenant_name: str
     phone_number: str
@@ -29,7 +34,7 @@ class RegisterRequest(BaseModel):
 
 
 class RegisterInviteeRequest(BaseModel):
-    """Invitee registration request payload."""
+    """Invitee registration request payload (for backwards compatibility)."""
     full_name: str
     phone_number: str
     invitation_id: str
@@ -45,12 +50,28 @@ async def register_user(
     Register a new user and create tenant after Firebase authentication.
     This is called after the user signs up via Firebase Auth and completes payment on the frontend.
     """
+    # Validate and sanitize inputs
+    try:
+        validated_request = ValidatedRegisterRequest(**request.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Normalize email for case-insensitive matching
+    normalized_email = normalize_email(email)
+
     db = get_firestore()
     print(f"Firestore client project: {db.project}")
     print(f"Emulator host: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
-    # Check if user already exists
+
+    # Check if user already exists by firebase_uid OR normalized email
     users_ref = db.collection(FirestoreCollections.USERS)
     existing_user = await users_ref.where("firebase_uid", "==", firebase_uid).limit(1).get()
+
+    # Also check by normalized email
+    if len(existing_user) == 0:
+        existing_by_email = await users_ref.where("normalized_email", "==", normalized_email).limit(1).get()
+        if len(existing_by_email) > 0:
+            existing_user = existing_by_email
 
     if len(existing_user) > 0:
         # User already registered, return existing user and tenant
@@ -75,14 +96,11 @@ async def register_user(
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
 
-    # Parse subscription plan
-    try:
-        sub_plan = SubscriptionPlan(request.subscription_plan)
-    except ValueError:
-        sub_plan = SubscriptionPlan.STARTER
+    # Parse subscription plan (already validated)
+    sub_plan = SubscriptionPlan(validated_request.subscription_plan)
 
     tenant_data = TenantCreate(
-        name=request.tenant_name,
+        name=validated_request.tenant_name,
         owner_id=user_id,
         subscription_plan=sub_plan
     )
@@ -127,17 +145,18 @@ async def register_user(
 
     # Create new user and link to tenant
     user_data = UserCreate(
-        email=email,
-        full_name=request.full_name,
-        phone_number=request.phone_number,
+        email=normalized_email,  # Use normalized email
+        full_name=validated_request.full_name,
+        phone_number=validated_request.phone_number,
         firebase_uid=firebase_uid,
-        role=UserRole(request.role),
+        role=UserRole(validated_request.role),
         tenant_ids=[tenant_id]
     )
 
     user_doc = {
         **user_data.model_dump(),
-        "organization": request.tenant_name,  # Store tenant/company name as organization
+        "normalized_email": normalized_email,  # Store normalized email for queries
+        "organization": validated_request.tenant_name,  # Store tenant/company name as organization
         "created_at": now,
         "updated_at": now,
     }
@@ -183,11 +202,26 @@ async def register_invitee(
     This is called after the user accepts an invitation and completes Firebase authentication.
     No payment required, no tenant creation. User joins existing tenant.
     """
+    # Validate and sanitize inputs
+    try:
+        validated_request = ValidatedInviteeRegisterRequest(**request.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Normalize email for case-insensitive matching
+    normalized_email = normalize_email(email)
+
     db = get_firestore()
 
     # Check if user already exists
     users_ref = db.collection(FirestoreCollections.USERS)
     existing_user = await users_ref.where("firebase_uid", "==", firebase_uid).limit(1).get()
+
+    # Also check by normalized email
+    if len(existing_user) == 0:
+        existing_by_email = await users_ref.where("normalized_email", "==", normalized_email).limit(1).get()
+        if len(existing_by_email) > 0:
+            existing_user = existing_by_email
 
     if len(existing_user) > 0:
         raise HTTPException(status_code=400, detail="User already registered")
@@ -205,8 +239,9 @@ async def register_invitee(
     if invitation_data["status"] != "pending":
         raise HTTPException(status_code=400, detail="Invitation is not pending")
 
-    # Verify email matches
-    if invitation_data["email"] != email:
+    # Verify email matches (case-insensitive)
+    invitation_email_normalized = normalize_email(invitation_data["email"])
+    if invitation_email_normalized != normalized_email:
         raise HTTPException(status_code=400, detail="Email does not match invitation")
 
     # Check if expired
@@ -233,9 +268,9 @@ async def register_invitee(
         # Organization is inherited from their partner
 
     user_data = UserCreate(
-        email=email,
-        full_name=request.full_name,
-        phone_number=request.phone_number,
+        email=normalized_email,  # Use normalized email
+        full_name=validated_request.full_name,
+        phone_number=validated_request.phone_number,
         firebase_uid=firebase_uid,
         role=role,
         tenant_ids=[invitation_data["tenant_id"]],
@@ -244,6 +279,7 @@ async def register_invitee(
 
     user_doc = {
         **user_data.model_dump(),
+        "normalized_email": normalized_email,  # Store normalized email for queries
         "organization": organization,  # Store company/organization name
         "notification_settings": invitation_data.get("notification_settings", {}),
         "created_at": now,
@@ -368,11 +404,14 @@ async def get_user_by_email(email: str):
     Get user by email (for demo/admin purposes).
     WARNING: This endpoint bypasses authentication - use only for demo/testing.
     """
+    # Normalize email for case-insensitive lookup
+    normalized_email = normalize_email(email)
+
     db = get_firestore()
     users_ref = db.collection(FirestoreCollections.USERS)
 
-    # Find user by email
-    users = await users_ref.where("email", "==", email).limit(1).get()
+    # Find user by normalized email
+    users = await users_ref.where("normalized_email", "==", normalized_email).limit(1).get()
 
     if len(users) == 0:
         raise HTTPException(status_code=404, detail="User not found")

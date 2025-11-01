@@ -54,6 +54,7 @@ class User(UserBase):
     id: str
     firebase_uid: str
     tenant_ids: List[str] = Field(default_factory=list)
+    normalized_email: Optional[str] = None  # Normalized email for case-insensitive queries
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None
