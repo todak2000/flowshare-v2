@@ -49,8 +49,21 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      await signOut(auth);
+
+      // Clear all session and local storage data
+      sessionStorage.removeItem('flowshare-user-token');
+      sessionStorage.removeItem('flowshare-user-token-expires-at');
+      localStorage.removeItem('flowshare-auth-storage');
+
+      // Clear auth cookie
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+      // Clear user state
       clearUser();
+
+      // Sign out from Firebase
+      await signOut(auth);
+
       router.push("/auth/login");
     } catch (error) {
       console.error("Logout failed:", error);

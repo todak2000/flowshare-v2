@@ -46,7 +46,9 @@ const DEMO_ACCOUNTS = {
   tenant: "Bomadi Terminal JV",
 };
 
-const DELETE_PASSWORD = "FlowShare@Demo2025";
+// Get demo password from environment variable
+// SECURITY: Never hardcode passwords in source code
+const DELETE_PASSWORD = process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD || "";
 
 // Helper to mask sensitive data in logs
 const maskSensitiveData = (text: string): string => {
@@ -73,6 +75,20 @@ export default function DemoAdminPage() {
     text: string;
   } | null>(null);
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
+
+  // SECURITY: Block access in production environment
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' &&
+        process.env.NEXT_PUBLIC_ENVIRONMENT === 'production') {
+      router.push('/');
+    }
+    if (!DELETE_PASSWORD) {
+      setMessage({
+        type: "error",
+        text: "Demo admin password not configured. Set NEXT_PUBLIC_DEMO_ADMIN_PASSWORD environment variable."
+      });
+    }
+  }, [router]);
 
   // Data generation settings
   const [generationPeriod, setGenerationPeriod] = useState<

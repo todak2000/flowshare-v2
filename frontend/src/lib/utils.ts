@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import DOMPurify from 'isomorphic-dompurify';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -110,21 +111,54 @@ export const formatLocalDate = (date: Date): string => {
 
 /**
  * Removes Markdown HTML code fences (like ```html) from the
- * beginning and end of a string.
+ * beginning and end of a string, then sanitizes the HTML to prevent XSS attacks.
+ *
+ * SECURITY: This function uses DOMPurify to sanitize HTML content before rendering.
+ * This prevents XSS attacks from malicious HTML in user-generated or AI-generated content.
  *
  * @param {string} inputString The string containing the code-fenced HTML.
- * @returns {string} The cleaned HTML string, ready for rendering.
+ * @returns {string} The cleaned and sanitized HTML string, safe for rendering.
  */
-export const cleanHtmlString = (inputString: string) => {
+export const cleanHtmlString = (inputString: string): string => {
   if (typeof inputString !== "string") {
     console.warn("cleanHtmlString received a non-string input:", inputString);
     return ""; // Return an empty string for non-string inputs
   }
 
-  // Chain the replace calls to clean both ends of the string
-  return inputString
+  // Step 1: Remove markdown code fences
+  const withoutFences = inputString
     .replace(/^```html\s*/, "") // Remove the starting ```html and any following whitespace
     .replace(/\s*```$/, ""); // Remove the closing ``` and any preceding whitespace
+
+  // Step 2: Sanitize HTML to prevent XSS attacks
+  // Allow only safe HTML tags and attributes
+  const sanitized = DOMPurify.sanitize(withoutFences, {
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'div', 'span',
+      'ul', 'ol', 'li',
+      'strong', 'em', 'b', 'i', 'u',
+      'a', 'code', 'pre',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ],
+    ALLOWED_ATTR: ['class', 'href', 'title', 'target', 'rel'],
+    ALLOW_DATA_ATTR: false,
+    KEEP_CONTENT: true,
+  });
+
+  // Post-process: Add security attributes to links
+  if (typeof document !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = sanitized;
+    const links = tempDiv.querySelectorAll('a');
+    links.forEach((link) => {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    });
+    return tempDiv.innerHTML;
+  }
+
+  return sanitized;
 };
 
 /**

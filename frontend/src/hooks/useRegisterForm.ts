@@ -127,6 +127,11 @@ export function useRegisterForm() {
           { headers: { Authorization: `Bearer ${idToken}` } }
         );
 
+        // Set auth cookie for middleware (expires in 7 days)
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        document.cookie = `auth-token=${idToken}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+
         // Clear session
         [
           "invitationAccepted",
