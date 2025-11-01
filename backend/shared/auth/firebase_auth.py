@@ -44,9 +44,16 @@ async def verify_firebase_token(
     token = credentials.credentials
 
     try:
-        # Verify the ID token
-        decoded_token = auth.verify_id_token(token)
+        # Verify the ID token and check if it has been revoked
+        # This ensures tokens are invalid after password change or account deletion
+        decoded_token = auth.verify_id_token(token, check_revoked=True)
         return decoded_token
+    except auth.RevokedIdTokenError:
+        logger.warning(f"Revoked token used for user: {token[:20]}...")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token has been revoked. Please login again.",
+        )
     except auth.InvalidIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -56,6 +63,12 @@ async def verify_firebase_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token has expired",
+        )
+    except auth.CertificateFetchError:
+        logger.error("Failed to fetch Firebase certificates for token verification")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable",
         )
     except Exception as e:
         logger.error(f"Token verification error: {str(e)}")

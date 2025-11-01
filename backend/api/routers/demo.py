@@ -1,19 +1,39 @@
 """Demo/Admin routes - bypasses authentication for testing."""
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, status
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
 import sys
 import uuid
 import logging
+import secrets
 
 sys.path.append("../..")
 
 from shared.database import get_firestore, FirestoreCollections
 from shared.models.production import ProductionEntry, ProductionEntryCreate, ProductionEntryStatus
+from shared.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def check_demo_access():
+    """
+    Check if demo endpoints are accessible in current environment.
+    Demo endpoints are ONLY available in development mode.
+    """
+    if settings.environment == "production":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Endpoint not found"
+        )
+
+    if not settings.demo_password:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo endpoints are not configured. Set DEMO_PASSWORD environment variable."
+        )
 
 
 class DemoProductionEntryCreate(BaseModel):
@@ -35,6 +55,7 @@ async def create_demo_production_entry(entry: DemoProductionEntryCreate = Body(.
     Create production entry without authentication (for demo/testing only).
     WARNING: This bypasses all auth checks - use only in development.
     """
+    check_demo_access()  # Verify environment and configuration
     db = get_firestore()
     entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
 
@@ -70,6 +91,7 @@ async def delete_demo_production_entry(entry_id: str):
     Delete production entry without authentication (for demo/testing only).
     WARNING: This bypasses all auth checks - use only in development.
     """
+    check_demo_access()  # Verify environment and configuration
     db = get_firestore()
     entries_ref = db.collection(FirestoreCollections.PRODUCTION_ENTRIES)
 
@@ -89,6 +111,7 @@ async def delete_demo_terminal_receipt(receipt_id: str):
     Delete terminal receipt without authentication (for demo/testing only).
     WARNING: This bypasses all auth checks - use only in development.
     """
+    check_demo_access()  # Verify environment and configuration
     db = get_firestore()
     receipts_ref = db.collection(FirestoreCollections.TERMINAL_RECEIPTS)
 
@@ -108,6 +131,7 @@ async def delete_demo_reconciliation(reconciliation_id: str):
     Delete reconciliation without authentication (for demo/testing only).
     WARNING: This bypasses all auth checks - use only in development.
     """
+    check_demo_access()  # Verify environment and configuration
     db = get_firestore()
     reconciliations_ref = db.collection(FirestoreCollections.RECONCILIATIONS)
 
@@ -132,11 +156,17 @@ async def delete_all_demo_data(request: BulkDeleteRequest = Body(...)):
     """
     Delete all production entries, terminal receipts, and reconciliations for a tenant.
     WARNING: This bypasses all auth checks - use only in development.
-    Requires password: FlowShare@Demo2025
+    Requires password configured via DEMO_PASSWORD environment variable.
     """
-    # Verify password
-    if request.password != "FlowShare@Demo2025":
-        raise HTTPException(status_code=403, detail="Invalid password")
+    check_demo_access()  # Verify environment and configuration
+
+    # Verify password using constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(request.password, settings.demo_password):
+        logger.warning(f"Invalid demo password attempt for tenant: {request.tenant_id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid password"
+        )
 
     db = get_firestore()
 

@@ -1,7 +1,10 @@
 """Main FastAPI application for FlowShare V2 API Service."""
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from fastapi.openapi.utils import get_openapi
 import logging
 import sys
 
@@ -10,6 +13,7 @@ sys.path.append("..")
 
 from shared.config import settings
 from shared.database import initialize_firestore
+from shared.middleware import SecurityHeadersMiddleware, RateLimitMiddleware, verify_swagger_credentials
 from routers import (
     auth,
     users,
@@ -57,23 +61,173 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI app with lifespan
+# Disable default docs in production, will create custom protected endpoints
 app = FastAPI(
     title="FlowShare V2 API",
     description="AI-Powered Hydrocarbon Allocation Platform API",
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,  # Disabled - using custom protected endpoint
+    redoc_url=None,  # Disabled - using custom protected endpoint
+    openapi_url=None if settings.environment == "production" else "/openapi.json",
     lifespan=lifespan,
 )
 
+# HTTP Basic Auth for Swagger docs
+security = HTTPBasic()
 
-# Configure CORS
+
+def get_current_docs_user(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify Swagger documentation credentials."""
+    if not verify_swagger_credentials(credentials.username, credentials.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid documentation credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+
+# Protected Swagger UI endpoint
+@app.get("/docs", include_in_schema=False)
+async def get_documentation(username: str = Depends(get_current_docs_user)):
+    """Protected Swagger UI documentation (requires authentication)."""
+    if not settings.swagger_password:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Documentation is not configured. Set SWAGGER_PASSWORD environment variable."
+        )
+
+    # Custom Swagger UI HTML with requestInterceptor to preserve auth credentials
+    from fastapi.responses import HTMLResponse
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css">
+        <link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+        <title>{app.title} - Documentation</title>
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+        <script>
+            window.onload = function() {{
+                window.ui = SwaggerUIBundle({{
+                    url: '/openapi.json',
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    layout: "StandaloneLayout",
+                    // Preserve HTTP Basic Auth credentials for all requests
+                    requestInterceptor: (req) => {{
+                        req.credentials = 'include';
+                        return req;
+                    }}
+                }});
+            }};
+        </script>
+    </body>
+    </html>
+    """
+
+    return HTMLResponse(content=html_content)
+
+
+# Protected ReDoc endpoint
+@app.get("/redoc", include_in_schema=False)
+async def get_redocumentation(username: str = Depends(get_current_docs_user)):
+    """Protected ReDoc documentation (requires authentication)."""
+    if not settings.swagger_password:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Documentation is not configured. Set SWAGGER_PASSWORD environment variable."
+        )
+
+    # Custom ReDoc HTML with credentials handling
+    from fastapi.responses import HTMLResponse
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{app.title} - Documentation</title>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <redoc spec-url='/openapi.json'></redoc>
+        <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"></script>
+    </body>
+    </html>
+    """
+
+    return HTMLResponse(content=html_content)
+
+
+# Protected OpenAPI schema endpoint
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint(username: str = Depends(get_current_docs_user)):
+    """Protected OpenAPI schema (requires authentication)."""
+    if not settings.swagger_password:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Documentation is not configured. Set SWAGGER_PASSWORD environment variable."
+        )
+    return get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+
+# Add Security Headers Middleware (FIRST - applies to all responses)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add Rate Limiting Middleware (SECOND - before CORS)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.rate_limit_per_minute
+)
+
+# Configure CORS (THIRD - after security middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Restrict to specific HTTP methods
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    # Restrict to necessary headers
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With",
+        "X-API-Key",  # For SCADA API
+    ],
+    # Expose necessary headers to frontend
+    expose_headers=["Content-Disposition"],  # For file downloads
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 

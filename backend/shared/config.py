@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash-exp"  # Main model for analysis
     gemini_flash_model: str = "gemini-2.5-flash"  # Fast model for chat
 
+    # Security
+    swagger_username: str = "admin"  # Change in production
+    swagger_password: str = ""  # REQUIRED in production - set via environment variable
+    demo_password: str = ""  # REQUIRED for demo endpoints - set via environment variable
+    rate_limit_per_minute: int = 60  # Requests per minute per IP
+
     # Environment
     environment: str = "development"
     debug: bool = True
