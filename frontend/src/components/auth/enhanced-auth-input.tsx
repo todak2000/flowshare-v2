@@ -87,7 +87,7 @@ export function EnhancedAuthInput({
         )}
 
         {/* Input */}
-        <motion.input
+        <input
           {...props}
           type={inputType}
           value={internalValue}
