@@ -69,16 +69,19 @@ jobs:
             GEMINI_API_KEY=GEMINI_API_KEY:latest
             ZEPTO_TOKEN=ZEPTO_TOKEN:latest
 
-      - name: Install gcloud beta components
-        run: |
-          gcloud components install beta --quiet
-
       - name: Apply Eventarc Pub/Sub Trigger
         run: |
           # This command is run *by* your Deployer SA
           # It *configures* the trigger to *use* your Invoker SA
 
-          gcloud beta eventarc triggers apply flowshare-communicator-trigger \
+          gcloud eventarc triggers update flowshare-communicator-trigger \
+            --destination-run-service=flowshare-communicator-agent \
+            --destination-run-region=${{ secrets.GCP_REGION }} \
+            --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
+            --transport-topic=communicator-jobs \
+            --service-account="eventarc-cloudrun-invoker@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --location=${{ secrets.GCP_REGION }} || \
+          gcloud eventarc triggers create flowshare-communicator-trigger \
             --destination-run-service=flowshare-communicator-agent \
             --destination-run-region=${{ secrets.GCP_REGION }} \
             --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \

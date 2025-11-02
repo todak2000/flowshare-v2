@@ -68,15 +68,18 @@ jobs:
             FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
             GEMINI_API_KEY=GEMINI_API_KEY:latest
 
-      - name: Install gcloud beta components
-        run: |
-          gcloud components install beta --quiet
-
       - name: Apply Eventarc Pub/Sub Trigger
         run: |
           # This command is run *by* your Deployer SA
           # It *configures* the trigger to *use* your Invoker SA
-          gcloud beta eventarc triggers apply flowshare-auditor-trigger \
+          gcloud eventarc triggers update flowshare-auditor-trigger \
+            --destination-run-service=flowshare-auditor-agent \
+            --destination-run-region=${{ secrets.GCP_REGION }} \
+            --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
+            --transport-topic=auditor-jobs \
+            --service-account="eventarc-cloudrun-invoker@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --location=${{ secrets.GCP_REGION }} || \
+          gcloud eventarc triggers create flowshare-auditor-trigger \
             --destination-run-service=flowshare-auditor-agent \
             --destination-run-region=${{ secrets.GCP_REGION }} \
             --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
