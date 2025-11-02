@@ -57,7 +57,7 @@ jobs:
           service: "flowshare-frontend"
           region: "${{ secrets.GCP_REGION }}"
           image: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/frontend:${{ github.sha }}"
-          flags: '--allow-unauthenticated'
+          flags: '--allow-unauthenticated --timeout=300 --max-instances=10 --min-instances=0 --memory=1Gi --cpu=2 --execution-environment=gen2 --cpu-throttling --concurrency=100'
           env_vars: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           secrets: |

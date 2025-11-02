@@ -54,7 +54,7 @@ jobs:
           service: 'flowshare-backend-api'
           region: '${{ secrets.GCP_REGION }}'
           image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/backend-api:${{ github.sha }}'
-          flags: '--no-allow-unauthenticated --timeout=300 --max-instances=10 --min-instances=0 --memory=512Mi --cpu=1'
+          flags: '--allow-unauthenticated --timeout=300 --max-instances=10 --min-instances=0 --memory=1Gi --cpu=2 --execution-environment=gen2 --cpu-throttling --concurrency=100'
           env_vars: |
             GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
             GCP_REGION=${{ secrets.GCP_REGION }}
