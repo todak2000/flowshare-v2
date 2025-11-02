@@ -57,4 +57,4 @@ jobs:
           platform: 'managed'
           no-allow-unauthenticated: true
           # This agent is triggered by Pub/Sub, so we set the trigger type
-          flags: '--set-triggers-pubsub-topic=accountant-jobs'
+          flags: '--add-trigger-pubsub-topic=accountant-jobs'

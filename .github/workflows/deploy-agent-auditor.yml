@@ -56,4 +56,4 @@ jobs:
           image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/auditor-agent:${{ github.sha }}'
           platform: 'managed'
           no-allow-unauthenticated: true
-          flags: '--set-triggers-pubsub-topic=auditor-jobs'
+          flags: '--add-trigger-pubsub-topic=auditor-jobs'

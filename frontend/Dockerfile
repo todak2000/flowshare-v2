@@ -1,5 +1,5 @@
 # Base image using Node.js 18 on Alpine Linux
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Stage 1: Install dependencies
 # This stage is cached and only re-runs when package.json or yarn.lock changes.
@@ -34,7 +34,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Set the environment to production
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Create a dedicated, non-root user and group for security
 RUN addgroup --system --gid 1001 nodejs

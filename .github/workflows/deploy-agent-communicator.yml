@@ -55,4 +55,4 @@ jobs:
           image: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/communicator-agent:${{ github.sha }}"
           platform: "managed"
           no-allow-unauthenticated: true
-          flags: "--set-triggers-pubsub-topic=communicator-jobs"
+          flags: '--add-trigger-pubsub-topic=communicator-jobs'
