@@ -61,8 +61,8 @@ jobs:
             FIREBASE_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
             ENVIRONMENT=production
             DEBUG=false
-            CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
             APP_URL=${{ secrets.APP_URL }}
+            CORS_ORIGINS=http://localhost:3000,https://flowshare-frontend-226906955613.europe-west1.run.app,https://flowshare-accountant-agent-226906955613.europe-west1.run.app,https://flowshare-auditor-agent-226906955613.europe-west1.run.app,https://flowshare-communicator-agent-226906955613.europe-west1.run.app
           secrets: |
             FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
             FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest

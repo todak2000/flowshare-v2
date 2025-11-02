@@ -74,7 +74,14 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins into a list."""
-        origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        origins =  [
+            "https://flowshare-frontend-226906955613.europe-west1.run.app",
+            "https://flowshare-backend-api-226906955613.europe-west1.run.app",
+            "https://flowshare-communicator-agent-226906955613.europe-west1.run.app",
+            "https://flowshare-auditor-agent-226906955613.europe-west1.run.app",
+            "https://flowshare-accountant-agent-226906955613.europe-west1.run.app",
+            "http://localhost:3000",
+        ]
         # Debug logging for CORS origins
         import logging
         logger = logging.getLogger(__name__)
