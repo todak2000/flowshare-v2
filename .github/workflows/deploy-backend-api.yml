@@ -54,13 +54,12 @@ jobs:
           service: 'flowshare-backend-api'
           region: '${{ secrets.GCP_REGION }}'
           image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/backend-api:${{ github.sha }}'
-          platform: 'managed'
           flags: '--no-allow-unauthenticated'
-          env-vars: |
+          env_vars: |
             ENVIRONMENT=production
             DEBUG=false
-            CORS_ORIGINS=https://your-frontend-url # IMPORTANT: Replace with your frontend URL
-            APP_URL=https://your-frontend-url # IMPORTANT: Replace with your frontend URL
+            CORS_ORIGINS=https://your-frontend-url
+            APP_URL=https://your-frontend-url
           secrets: |
             FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
             FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest

@@ -53,7 +53,6 @@ jobs:
           service: "flowshare-communicator-agent"
           region: "${{ secrets.GCP_REGION }}"
           image: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/communicator-agent:${{ github.sha }}"
-          platform: "managed"
           flags: '--no-allow-unauthenticated'
 
       - name: Apply Eventarc Pub/Sub Trigger

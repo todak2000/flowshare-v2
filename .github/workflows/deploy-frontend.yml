@@ -57,9 +57,8 @@ jobs:
           service: "flowshare-frontend"
           region: "${{ secrets.GCP_REGION }}"
           image: "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/frontend:${{ github.sha }}"
-          platform: "managed"
-          allow-unauthenticated: true
-          env-vars: |
+          flags: '--allow-unauthenticated'
+          env_vars: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           secrets: |
             NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest
