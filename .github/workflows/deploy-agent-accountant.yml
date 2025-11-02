@@ -68,22 +68,43 @@ jobs:
             FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
             GEMINI_API_KEY=GEMINI_API_KEY:latest
       
-      - name: Apply Eventarc Pub/Sub Trigger
+      - name: Create or Update Eventarc Trigger
         run: |
-          # This command is run *by* your Deployer SA
-          # It *configures* the trigger to *use* your Invoker SA
+          # Set key variables
+          TRIGGER_NAME="flowshare-accountant-trigger"
+          LOCATION="${{ secrets.GCP_REGION }}"
+          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
+          SERVICE_ACCOUNT_EMAIL="eventarc-cloudrun-invoker@$PROJECT_ID.iam.gserviceaccount.com"
 
-          gcloud eventarc triggers update flowshare-accountant-trigger \
-            --destination-run-service=flowshare-accountant-agent \
-            --destination-run-region=${{ secrets.GCP_REGION }} \
-            --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
-            --transport-topic=accountant-jobs \
-            --service-account="eventarc-cloudrun-invoker@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
-            --location=${{ secrets.GCP_REGION }} || \
-          gcloud eventarc triggers create flowshare-accountant-trigger \
-            --destination-run-service=flowshare-accountant-agent \
-            --destination-run-region=${{ secrets.GCP_REGION }} \
-            --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
-            --transport-topic=accountant-jobs \
-            --service-account="eventarc-cloudrun-invoker@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
-            --location=${{ secrets.GCP_REGION }}
+          # Check if trigger already exists
+          echo "Checking for existing trigger: $TRIGGER_NAME"
+          EXISTING_TRIGGER=$(gcloud eventarc triggers list \
+              --location="$LOCATION" \
+              --filter="name:$TRIGGER_NAME" \
+              --format="value(name)" \
+              --project="$PROJECT_ID")
+
+          # Create or Update based on check
+          if [ -z "$EXISTING_TRIGGER" ]; then
+            # Trigger does not exist: Create it
+            echo "Trigger not found. Creating new trigger..."
+            gcloud eventarc triggers create "$TRIGGER_NAME" \
+              --project="$PROJECT_ID" \
+              --location="$LOCATION" \
+              --destination-run-service="flowshare-accountant-agent" \
+              --destination-run-region="$LOCATION" \
+              --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
+              --transport-topic="projects/$PROJECT_ID/topics/accountant-jobs" \
+              --service-account="$SERVICE_ACCOUNT_EMAIL"
+          else
+            # Trigger already exists: Update it
+            echo "Trigger found. Updating existing trigger..."
+            # NOTE: We CANNOT update --transport-topic.
+            # This command only updates the destination and service account.
+            gcloud eventarc triggers update "$TRIGGER_NAME" \
+              --project="$PROJECT_ID" \
+              --location="$LOCATION" \
+              --destination-run-service="flowshare-accountant-agent" \
+              --destination-run-region="$LOCATION" \
+              --service-account="$SERVICE_ACCOUNT_EMAIL"
+          fi
