@@ -199,16 +199,9 @@ async def get_open_api_endpoint(username: str = Depends(get_current_docs_user)):
     )
 
 
-# Add Security Headers Middleware (FIRST - applies to all responses)
-app.add_middleware(SecurityHeadersMiddleware)
-
-# Add Rate Limiting Middleware (SECOND - before CORS)
-app.add_middleware(
-    RateLimitMiddleware,
-    requests_per_minute=settings.rate_limit_per_minute
-)
-
-# Configure CORS (THIRD - after security middleware)
+# Configure CORS (FIRST - must be first to handle preflight requests and add headers to all responses)
+logger.info(f"Configuring CORS with origins: {settings.cors_origins_list}")
+logger.info(f"Raw CORS_ORIGINS env var: {settings.cors_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -229,6 +222,15 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],  # For file downloads
     max_age=3600,  # Cache preflight requests for 1 hour
 )
+
+# Add Rate Limiting Middleware (SECOND - after CORS)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.rate_limit_per_minute
+)
+
+# Add Security Headers Middleware (THIRD - applies to all responses)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.get("/health")

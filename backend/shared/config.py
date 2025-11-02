@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:3000, https://flowshare-frontend-226906955613.europe-west1.run.app"
+    cors_origins: str = "http://localhost:3000,https://flowshare-frontend-226906955613.europe-west1.run.app"
 
     # Agents
     auditor_agent_url: str = "https://flowshare-auditor-agent-226906955613.europe-west1.run.app"
@@ -74,7 +74,12 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins into a list."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        # Debug logging for CORS origins
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"CORS Origins configured: {origins}")
+        return origins
 
     class Config:
         # Look for .env file in the backend directory (parent of shared)
