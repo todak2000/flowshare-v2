@@ -14,7 +14,7 @@ sys.path.append("..")
 from shared.config import settings
 from shared.database import initialize_firestore
 from shared.middleware import SecurityHeadersMiddleware, RateLimitMiddleware, verify_swagger_credentials
-from routers import (
+from api.routers import (
     auth,
     users,
     tenants,
