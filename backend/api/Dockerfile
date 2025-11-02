@@ -12,6 +12,9 @@ COPY shared /app/shared
 # Copy API code
 COPY api /app/api
 
+# Set Python path to include /app for shared imports
+ENV PYTHONPATH=/app
+
 WORKDIR /app/api
 
 # Expose port
