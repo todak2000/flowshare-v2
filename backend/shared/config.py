@@ -41,12 +41,12 @@ class Settings(BaseSettings):
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000, https://flowshare-frontend-226906955613.europe-west1.run.app"
 
     # Agents
-    auditor_agent_url: str = "http://localhost:8001"
-    accountant_agent_url: str = "http://localhost:8002"
-    communicator_agent_url: str = "http://localhost:8003"
+    auditor_agent_url: str = "https://flowshare-auditor-agent-226906955613.europe-west1.run.app"
+    accountant_agent_url: str = "https://flowshare-accountant-agent-226906955613.europe-west1.run.app"
+    communicator_agent_url: str = "https://flowshare-communicator-agent-226906955613.europe-west1.run.app"
 
     # Email (ZeptoMail)
     zepto_token: str = ""
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     logo_url: str = "https://firebasestorage.googleapis.com/v0/b/back-allocation.firebasestorage.app/o/logo.webp?alt=media&token=a14f4e59-df8d-41bd-ae0c-3a1224c86033"
 
     # Frontend URL
-    app_url: str = "http://localhost:3000"
+    app_url: str = "https://flowshare-frontend-226906955613.europe-west1.run.app"
 
     # Gemini AI
     gemini_api_key: str = ""
