@@ -16,6 +16,9 @@ google-cloud-bigquery==3.13.0
 # Vertex AI
 google-cloud-aiplatform==1.38.1
 
+# Gemini AI
+google-generativeai==0.3.2
+
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
