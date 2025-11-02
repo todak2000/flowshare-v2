@@ -27,6 +27,13 @@ jobs:
           workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
 
+      # ----- ADD THIS STEP -----
+      - name: Set up GCloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ----- AND ADD THIS STEP -----
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
