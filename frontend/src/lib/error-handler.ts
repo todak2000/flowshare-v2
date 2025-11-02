@@ -51,6 +51,16 @@ function sanitizeErrorMessage(message: string, isProduction: boolean = process.e
  * Convert any error into a user-friendly AppError
  */
 export function handleApiError(error: any): AppError {
+  // Handle null/undefined error
+  if (!error) {
+    return {
+      title: 'Unexpected Error',
+      message: 'Something went wrong. Please try again.',
+      action: 'If the problem persists, contact support.',
+      code: 'UNKNOWN',
+    };
+  }
+
   // Axios error
   if (error.response) {
     const status = error.response.status;
