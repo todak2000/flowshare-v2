@@ -2,12 +2,17 @@
 import asyncio
 import json
 import logging
+import os
+from contextlib import asynccontextmanager
 import sys
 from datetime import datetime, timezone  # <-- Moved to top
 from google.cloud.firestore_v1 import AsyncClient, FieldFilter
 from google.cloud import pubsub_v1
 
 from concurrent import futures  # This is no longer strictly needed but OK
+
+from fastapi import FastAPI
+import uvicorn
 
 sys.path.append("../..")
 from shared.config import settings
@@ -402,10 +407,11 @@ async def async_callback(message: pubsub_v1.subscriber.message.Message):
         logger.error(f"❌ Critical error processing message: {str(e)}", exc_info=True)
         message.nack() # Nack here too, but it might go to dead-letter
 
-# ✅ IMPROVEMENT: Renamed to `main_async` and made `async`
-async def main_async():
+# ✅ RENAMED from main_async to run_subscriber_worker
+# ✅ ADDED better shutdown logic in 'finally' block
+async def run_subscriber_worker():
     """Start the Communicator Agent subscriber."""
-    logger.info("Starting Communicator Agent...")
+    logger.info("Starting Communicator Agent (async worker)...")
 
     subscriber = pubsub_v1.SubscriberClient()
 
@@ -426,46 +432,87 @@ async def main_async():
         subscription_paths.append(path)
         logger.info(f"Will listen for messages on {path}")
     
-    # Get the running event loop
     loop = asyncio.get_running_loop()
 
-    # --- THIS IS THE NEW SYNCHRONOUS WRAPPER ---
     def sync_callback(message: pubsub_v1.subscriber.message.Message):
         """
         Synchronous wrapper to schedule the async callback on the main event loop.
-        This function is called by the Pub/Sub background thread.
         """
         logger.debug(f"Sync callback received, scheduling {message.message_id} on main loop.")
-        
-        # Safely schedule the *real* async callback to run on the main loop
         asyncio.run_coroutine_threadsafe(async_callback(message), loop)
-    # --- END OF NEW WRAPPER ---
     
     streaming_pull_futures = []
     for subscription_path in subscription_paths:
-        # Subscribe using the *synchronous* wrapper
         future = subscriber.subscribe(subscription_path, callback=sync_callback)
         streaming_pull_futures.append(future)
     
     logger.info(f"Listening for messages on {len(subscription_paths)} subscriptions...")
     
-    # Keep the script running
     stop_event = asyncio.Event()
     try:
+        # Keep the worker alive
         await stop_event.wait()
+    except asyncio.CancelledError:
+        logger.info("Worker shutdown initiated by lifespan...")
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received, stopping...")
-        for future in streaming_pull_futures:
-            future.cancel()
-            future.result()
-        logger.info("Communicator Agent stopped")
     except Exception as e:
-        logger.error(f"An unexpected error occurred in main_async: {e}", exc_info=True)
+        logger.error(f"An unexpected error occurred in worker: {e}", exc_info=True)
+    finally:
+        # This block now runs on ANY exit, ensuring clean shutdown
+        logger.info(f"Cancelling {len(streaming_pull_futures)} subscription futures...")
         for future in streaming_pull_futures:
             future.cancel()
-            future.result()
+            future.result()  # Wait for cancellation
+        logger.info("Communicator Agent worker stopped")
 
+
+# ✅ --- THIS IS THE NEW WEB SERVER LOGIC (using lifespan) ---
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    On server startup, create a background task
+    to run our Pub/Sub worker. On shutdown, cancel it.
+    """
+    logger.info("Server startup: Creating background Pub/Sub worker task.")
+    # Create the task
+    worker_task = asyncio.create_task(run_subscriber_worker())
+    
+    yield  # This is where the application runs
+    
+    # After the application shuts down, cancel the worker task
+    logger.info("Server shutdown: Cancelling background worker task...")
+    worker_task.cancel()
+    try:
+        # Wait for the task to finish cancelling
+        await worker_task
+    except asyncio.CancelledError:
+        logger.info("Background worker task successfully cancelled.")
+
+# Create the FastAPI app and attach the lifespan event handler
+app = FastAPI(lifespan=lifespan)  # ✅ --- ATTACH LIFESPAN HERE ---
+
+@app.get("/")
+async def health_check():
+    """
+    A simple health check endpoint that Cloud Run can ping.
+    If this responds 200 OK, Cloud Run knows the container is alive.
+    """
+    return {"status": "healthy", "worker": "communicator-agent"}
+
+
+# ✅ --- THIS IS THE NEW ENTRY POINT ---
 
 if __name__ == "__main__":
-    # ✅ IMPROVEMENT: Run the async main function
-    asyncio.run(main_async())
+    # This is the entry point for the container
+
+    # Cloud Run provides the PORT environment variable
+    # Fallback to 8002 for local development
+    port = int(os.environ.get("PORT", 8003))
+
+    logger.info(f"Starting web server on host 0.0.0.0 and port {port}")
+
+    # This command starts the FastAPI server
+    # It will automatically use the asyncio loop
+    uvicorn.run(app, host="0.0.0.0", port=port)

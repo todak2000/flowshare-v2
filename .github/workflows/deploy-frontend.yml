@@ -49,7 +49,7 @@ jobs:
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
             NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-            
+
       - name: Deploy to Cloud Run
         id: "deploy"
         uses: "google-github-actions/deploy-cloudrun@v2"
@@ -60,7 +60,7 @@ jobs:
           platform: "managed"
           allow-unauthenticated: true
           env-vars: |
-            NEXT_PUBLIC_API_URL=https://flowshare-backend-api-your-hash-ew.a.run.app # IMPORTANT: Replace with your backend API URL
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           secrets: |
             NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:latest

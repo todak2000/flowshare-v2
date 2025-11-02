@@ -3,9 +3,10 @@ import asyncio
 import json
 import logging
 import sys
+import os
 from datetime import datetime, timezone  # ✅ Import timezone
 from typing import List
-
+from contextlib import asynccontextmanager
 sys.path.append("../..")
 
 from google.cloud import pubsub_v1
@@ -16,6 +17,8 @@ from shared.models.reconciliation import ReconciliationStatus, ReconciliationRes
 from shared.models.production import ProductionEntryStatus
 from allocation_engine import AllocationEngine, ProductionData
 from shared.ai import GeminiService
+from fastapi import FastAPI
+import uvicorn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -304,49 +307,74 @@ async def async_callback(message: pubsub_v1.subscriber.message.Message):
 
 
 # ✅ Renamed to main_async and made async
-async def main_async():
+async def run_subscriber_worker():
     """Start the Accountant Agent subscriber."""
-    logger.info("Starting Accountant Agent (async)...")
+    logger.info("Starting Accountant Agent (async worker)...")
 
     subscriber = pubsub_v1.SubscriberClient()
     subscription_path = subscriber.subscription_path(
         settings.gcp_project_id, f"{settings.pubsub_reconciliation_trigger_topic}-sub"
     )
 
-    # Get the running event loop
     loop = asyncio.get_running_loop()
 
-    # --- THIS IS THE NEW SYNCHRONOUS WRAPPER ---
     def sync_callback(message: pubsub_v1.subscriber.message.Message):
         """
         Synchronous wrapper to schedule the async callback on the main event loop.
-        This function is called by the Pub/Sub background thread.
         """
         logger.debug(f"Sync callback received, scheduling {message.message_id} on main loop.")
-        
-        # Safely schedule the *real* async callback to run on the main loop
         asyncio.run_coroutine_threadsafe(async_callback(message), loop)
-    # --- END OF NEW WRAPPER ---
 
-    # Subscribe using the *synchronous* wrapper
     streaming_pull_future = subscriber.subscribe(subscription_path, callback=sync_callback)
     logger.info(f"Listening for messages on {subscription_path}")
 
-    # Keep the script alive
+    # Keep the worker alive
     stop_event = asyncio.Event()
     try:
         await stop_event.wait()
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received, stopping...")
+    except asyncio.CancelledError:
+        logger.info("Worker shutdown initiated...")
         streaming_pull_future.cancel()
         streaming_pull_future.result()
-        logger.info("Accountant Agent stopped")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred in main_async: {e}", exc_info=True)
-        streaming_pull_future.cancel()
-        streaming_pull_future.result()
+        logger.info("Accountant Agent worker stopped")
+
+
+# --- THIS IS THE NEW WEB SERVER LOGIC ---
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    On server startup, create a background task
+    to run our Pub/Sub worker. On shutdown, cancel it.
+    """
+    logger.info("Server startup: Creating background Pub/Sub worker task.")
+    # Create the task
+    worker_task = asyncio.create_task(run_subscriber_worker())
+    
+    yield  # This is where the application runs
+    
+    # After the application shuts down, cancel the worker task
+    logger.info("Server shutdown: Cancelling background worker task...")
+    worker_task.cancel()
+    try:
+        # Wait for the task to finish cancelling
+        await worker_task
+    except asyncio.CancelledError:
+        logger.info("Background worker task successfully cancelled.")
+
+# Create the FastAPI app and attach the lifespan event handler
+app = FastAPI(lifespan=lifespan)  # ✅ --- ATTACH LIFESPAN HERE ---
+
+@app.get("/")
+async def health_check():
+    """
+    A simple health check endpoint that Cloud Run can ping.
+    If this responds 200 OK, Cloud Run knows the container is alive.
+    """
+    return {"status": "healthy", "worker": "accountant-agent"}
 
 
 if __name__ == "__main__":
-    # ✅ Run the async main function
-    asyncio.run(main_async())
+    port = int(os.environ.get("PORT", 8002))
+    logger.info(f"Starting web server on host 0.0.0.0 and port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
