@@ -25,6 +25,7 @@ def initialize_firestore() -> firestore.AsyncClient:
         firebase_private_key = settings.firebase_private_key
         firebase_client_email = settings.firebase_client_email
         firebase_project_id = settings.firebase_project_id or settings.gcp_project_id
+        firebase_private_key_id = settings.firebase_private_key_id
 
         if firebase_private_key and firebase_client_email and firebase_project_id:
             # Use service account credentials
@@ -32,6 +33,7 @@ def initialize_firestore() -> firestore.AsyncClient:
                 cred_dict = {
                     "type": "service_account",
                     "project_id": firebase_project_id,
+                    "private_key_id": firebase_private_key_id,
                     "private_key": firebase_private_key.replace('\\n', '\n'),
                     "client_email": firebase_client_email,
                     "token_uri": "https://oauth2.googleapis.com/token",
@@ -42,6 +44,8 @@ def initialize_firestore() -> firestore.AsyncClient:
                 cred = credentials.Certificate(cred_dict)
                 firebase_admin.initialize_app(cred)
                 print(f"✅ Firebase initialized with service account for project: {firebase_project_id}")
+                print(f"   Service account email: {firebase_client_email}")
+                print(f"   Private key ID: {cred_dict.get('private_key_id', 'Not set')}")
                 if os.getenv("FIRESTORE_EMULATOR_HOST"):
                     print(f"   Using Firestore Emulator at: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
             except Exception as e:
