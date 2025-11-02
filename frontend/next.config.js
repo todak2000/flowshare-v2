@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Output standalone for Docker deployment
+  output: 'standalone',
+
   // Turbopack is now stable in Next.js 15
   // Use it by running: npm run dev --turbo
   experimental: {
