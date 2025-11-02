@@ -1,0 +1,66 @@
+
+name: Deploy Backend API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/api/**'
+      - 'backend/shared/**'
+      - '.github/workflows/deploy-backend-api.yml'
+
+jobs:
+  deploy:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/api/Dockerfile
+          push: true
+          tags: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/backend-api:${{ github.sha }}'
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Cloud Run
+        id: 'deploy'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: 'flowshare-backend-api'
+          region: '${{ secrets.GCP_REGION }}'
+          image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/backend-api:${{ github.sha }}'
+          platform: 'managed'
+          no-allow-unauthenticated: true
+          env-vars: |
+            ENVIRONMENT=production
+            DEBUG=false
+            CORS_ORIGINS=https://your-frontend-url # IMPORTANT: Replace with your frontend URL
+            APP_URL=https://your-frontend-url # IMPORTANT: Replace with your frontend URL
+          secrets: |
+            FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
+            FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest
+            FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest
+            FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
+            ZEPTO_TOKEN=ZEPTO_TOKEN:latest
+            GEMINI_API_KEY=GEMINI_API_KEY:latest
+            SWAGGER_USERNAME=SWAGGER_USERNAME:latest
+            SWAGGER_PASSWORD=SWAGGER_PASSWORD:latest
+            DEMO_PASSWORD=DEMO_PASSWORD:latest

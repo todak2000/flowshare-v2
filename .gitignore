@@ -1,11 +1,26 @@
+# Markdown files (except README.md)
 *.md
+!README.md
+!**/README.md
+
+# Sensitive files
+
 credentials.json
-Back Allocation Methodology and Formulas.pdf
-backend/note.txt
-backend/venv
+gcloud_setup_local.sh
 backend/.env
-frontend/.next
-frontend/node_modules
+frontend/.env
+
+# PDFs
+Back Allocation Methodology and Formulas.pdf
+sample_report.pdf
+printed_report.pdf
+
+# Python
+backend/venv
+backend/note.txt
 backend/test_pubsub.py
 backend/*.sh
-sample_report.pdf
+
+# Node.js
+frontend/.next
+frontend/node_modules

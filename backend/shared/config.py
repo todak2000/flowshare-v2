@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Google Cloud Project
     gcp_project_id: str = "flowshare-v2"
-    gcp_region: str = "us-central1"
+    gcp_region: str = "europe-west1"
 
     # Firebase
     firebase_project_id: str = "flowshare-v2"
@@ -44,14 +44,14 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # Agents
-    auditor_agent_url: str = "http://auditor:8001"
-    accountant_agent_url: str = "http://accountant:8002"
-    communicator_agent_url: str = "http://communicator:8003"
+    auditor_agent_url: str = "http://localhost:8001"
+    accountant_agent_url: str = "http://localhost:8002"
+    communicator_agent_url: str = "http://localhost:8003"
 
     # Email (ZeptoMail)
     zepto_token: str = ""
-    zepto_from_email: str = "noreply@flowshare.io"
-    logo_url: str = ""
+    zepto_from_email: str = "noreply@futuxconsult.com"
+    logo_url: str = "https://firebasestorage.googleapis.com/v0/b/back-allocation.firebasestorage.app/o/logo.webp?alt=media&token=a14f4e59-df8d-41bd-ae0c-3a1224c86033"
 
     # Frontend URL
     app_url: str = "http://localhost:3000"
