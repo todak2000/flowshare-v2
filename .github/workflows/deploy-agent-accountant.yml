@@ -56,5 +56,15 @@ jobs:
           image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/accountant-agent:${{ github.sha }}'
           platform: 'managed'
           no-allow-unauthenticated: true
-          # This agent is triggered by Pub/Sub, so we set the trigger type
-          flags: '--add-trigger-pubsub-topic=accountant-jobs'
+      
+      - name: Apply Eventarc Pub/Sub Trigger
+        run: |
+          # This command is run *by* your Deployer SA
+          # It *configures* the trigger to *use* your Invoker SA
+          
+          gcloud beta eventarc triggers apply flowshare-accountant-trigger \
+            --destination-run-service=flowshare-accountant-agent \
+            --destination-run-region=${{ secrets.GCP_REGION }} \
+            --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \
+            --transport-topic=accountant-jobs \
+            --service-account="eventarc-cloudrun-invoker@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"

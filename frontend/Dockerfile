@@ -1,4 +1,4 @@
-# Base image using Node.js 18 on Alpine Linux
+# Base image using Node.js 20 on Alpine Linux
 FROM node:20-alpine AS base
 
 # Stage 1: Install dependencies
@@ -25,7 +25,24 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy the rest of your application source code
 COPY . .
 
-# Run the build command
+# ----------------- ADDED SECTION -----------------
+# Declare the build-time arguments passed from the GitHub Actions workflow
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+# Set them as environment variables *for the build stage*
+# This makes them available to the 'npm run build' command
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+# -------------------------------------------------
+
+# Run the build command (this will now succeed)
 RUN if [ -f yarn.lock ]; then yarn build; else npm run build; fi
 
 # Stage 3: Production image
@@ -51,8 +68,8 @@ USER nextjs
 # Expose the port the app will run on
 EXPOSE 3000
 
-# Set the port environment variable
-ENV PORT 3000
+# Set the port environment variable (Fixed legacy format)
+ENV PORT=3000
 
 # The command to start the Next.js standalone server
 CMD ["node", "server.js"]
