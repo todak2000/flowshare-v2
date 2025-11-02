@@ -55,6 +55,18 @@ jobs:
           region: '${{ secrets.GCP_REGION }}'
           image: '${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/flowshare-v2-repo/accountant-agent:${{ github.sha }}'
           flags: '--no-allow-unauthenticated'
+          env_vars: |
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            GCP_REGION=${{ secrets.GCP_REGION }}
+            ENVIRONMENT=production
+            DEBUG=false
+          secrets: |
+            FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
+            FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest
+            FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest
+            FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
+            FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest
+            GEMINI_API_KEY=GEMINI_API_KEY:latest
       
       - name: Apply Eventarc Pub/Sub Trigger
         run: |
