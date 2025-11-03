@@ -61,8 +61,8 @@ jobs:
             ENVIRONMENT=production
             DEBUG=false
             APP_URL=${{ secrets.APP_URL }}
+            FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
           secrets: |
-            FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
             FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest
             FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest
             FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
