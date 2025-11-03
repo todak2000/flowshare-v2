@@ -419,7 +419,7 @@ async def run_subscriber_worker():
         settings.pubsub_entry_flagged_topic,
         settings.pubsub_reconciliation_complete_topic,
         settings.pubsub_invitation_created_topic,
-        settings.pubsub_entry_edited_topic
+        settings.publish_production_entry_edited  # Fixed: use correct setting name
     ]
 
     subscription_paths = []
