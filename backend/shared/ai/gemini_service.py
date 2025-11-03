@@ -17,7 +17,9 @@ class GeminiService:
             logger.warning("Gemini API key not configured")
             return
 
-        genai.configure(api_key=settings.gemini_api_key)
+        # Strip any trailing whitespace/newlines from API key
+        api_key = settings.gemini_api_key.strip()
+        genai.configure(api_key=api_key)
         self.pro_model = genai.GenerativeModel(settings.gemini_model)
         self.flash_model = genai.GenerativeModel(settings.gemini_flash_model)
 
