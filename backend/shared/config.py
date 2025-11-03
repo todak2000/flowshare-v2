@@ -14,10 +14,6 @@ class Settings(BaseSettings):
 
     # Firebase
     firebase_project_id: str = "flowshare-v2"
-    firebase_private_key_id: str = ""
-    firebase_private_key: str = ""
-    firebase_client_email: str = ""
-    firebase_client_id: str = ""
 
     # Pub/Sub Topics
     pubsub_production_entry_topic: str = "production-entry-created"
@@ -41,7 +37,6 @@ class Settings(BaseSettings):
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:3000,https://flowshare-frontend-226906955613.europe-west1.run.app"
 
     # Agents
     auditor_agent_url: str = "https://flowshare-auditor-agent-226906955613.europe-west1.run.app"

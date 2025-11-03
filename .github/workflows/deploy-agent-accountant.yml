@@ -60,11 +60,7 @@ jobs:
             FIREBASE_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
             ENVIRONMENT=production
             DEBUG=false
-            FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
           secrets: |
-            FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest
-            FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest
-            FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
             GEMINI_API_KEY=GEMINI_API_KEY:latest
 
       - name: Create or Update Eventarc Trigger

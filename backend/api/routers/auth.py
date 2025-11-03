@@ -60,8 +60,7 @@ async def register_user(
     normalized_email = normalize_email(email)
 
     db = get_firestore()
-    print(f"Firestore client project: {db.project}")
-    print(f"Emulator host: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
+    
 
     # Check if user already exists by firebase_uid OR normalized email
     users_ref = db.collection(FirestoreCollections.USERS)

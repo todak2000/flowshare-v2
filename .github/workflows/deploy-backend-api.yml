@@ -62,12 +62,7 @@ jobs:
             ENVIRONMENT=production
             DEBUG=false
             APP_URL=${{ secrets.APP_URL }}
-            CORS_ORIGINS=http://localhost:3000,https://flowshare-frontend-226906955613.europe-west1.run.app,https://flowshare-accountant-agent-226906955613.europe-west1.run.app,https://flowshare-auditor-agent-226906955613.europe-west1.run.app,https://flowshare-communicator-agent-226906955613.europe-west1.run.app
           secrets: |
-            FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
-            FIREBASE_PRIVATE_KEY_ID=FIREBASE_PRIVATE_KEY_ID:latest
-            FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest
-            FIREBASE_CLIENT_ID=FIREBASE_CLIENT_ID:latest
             ZEPTO_TOKEN=ZEPTO_TOKEN:latest
             GEMINI_API_KEY=GEMINI_API_KEY:latest
             SWAGGER_USERNAME=SWAGGER_USERNAME:latest

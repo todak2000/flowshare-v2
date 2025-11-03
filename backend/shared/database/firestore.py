@@ -55,9 +55,7 @@ def initialize_firestore() -> firestore.AsyncClient:
                 with open(credentials_file, 'r') as f:
                     cred_data = json.load(f)
                 firebase_project_id = cred_data.get('project_id', settings.gcp_project_id)
-                print(f"✅ Firebase initialized from local credentials file: {credentials_file.name}")
-                print(f"   Project: {firebase_project_id}")
-                print(f"   Service account: {cred_data.get('client_email')}")
+     
                 if os.getenv("FIRESTORE_EMULATOR_HOST"):
                     print(f"   Using Firestore Emulator at: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
             except Exception as e:
@@ -78,55 +76,16 @@ def initialize_firestore() -> firestore.AsyncClient:
                     cred = credentials.Certificate(cred_data)
                     firebase_admin.initialize_app(cred)
                     firebase_project_id = cred_data.get('project_id', firebase_project_id)
-                    print(f"✅ Firebase initialized from Secret Manager (FIREBASE_CREDENTIALS_JSON)")
-                    print(f"   Project: {firebase_project_id}")
-                    print(f"   Service account: {cred_data.get('client_email')}")
+    
                     if os.getenv("FIRESTORE_EMULATOR_HOST"):
                         print(f"   Using Firestore Emulator at: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
                 except Exception as e:
                     print(f"❌ Failed to initialize from Secret Manager JSON: {e}")
                     raise
-            else:
-                # Priority 3: Try environment variables (fallback for old setup)
-                firebase_private_key = settings.firebase_private_key
-                firebase_client_email = settings.firebase_client_email
-                firebase_project_id = settings.firebase_project_id or settings.gcp_project_id
-                firebase_private_key_id = settings.firebase_private_key_id
-
-                if firebase_private_key and firebase_client_email and firebase_project_id:
-                    # Use service account credentials from environment
-                    try:
-                        cred_dict = {
-                            "type": "service_account",
-                            "project_id": firebase_project_id,
-                            "private_key_id": firebase_private_key_id,
-                            "private_key": firebase_private_key.replace('\\n', '\n'),
-                            "client_email": firebase_client_email,
-                            "token_uri": "https://oauth2.googleapis.com/token",
-                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{firebase_client_email}",
-                        }
-                        cred = credentials.Certificate(cred_dict)
-                        firebase_admin.initialize_app(cred)
-                        print(f"✅ Firebase initialized with environment variables for project: {firebase_project_id}")
-                        print(f"   Service account email: {firebase_client_email}")
-                        if os.getenv("FIRESTORE_EMULATOR_HOST"):
-                            print(f"   Using Firestore Emulator at: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
-                    except Exception as e:
-                        print(f"❌ Failed to initialize with environment variables: {e}")
-                        raise
-                else:
-                    # Priority 4: Fallback to default initialization (ADC)
-                    print("⚠️  Missing Firebase credentials file and environment variables")
-                    print("   Falling back to Application Default Credentials (ADC)")
-                    firebase_admin.initialize_app()
-                    firebase_project_id = settings.firebase_project_id or settings.gcp_project_id
-                    print("✅ Firebase initialized with default credentials")
-
+            
     # Use async_client() for async operations
     _db_client = firestore.AsyncClient(project=firebase_project_id)
-    print(f"✅ Firestore async client created: {type(_db_client)}")
+    print(f"✅ Firestore async client created")
     return _db_client
 
 
