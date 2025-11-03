@@ -29,7 +29,8 @@ def initialize_firestore() -> firestore.AsyncClient:
 
         print(f"DEBUG: Private key length: {len(firebase_private_key) if firebase_private_key else 0}")
         print(f"DEBUG: Private key starts with: {firebase_private_key[:50] if firebase_private_key else 'None'}...")
-        print(f"DEBUG: Private key has newlines: {'\\n' in firebase_private_key if firebase_private_key else False}")
+        newline_char = '\n'
+        print(f"DEBUG: Private key has newlines: {newline_char in firebase_private_key if firebase_private_key else False}")
 
         if firebase_private_key and firebase_client_email and firebase_project_id:
             # Use service account credentials
