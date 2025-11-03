@@ -82,10 +82,7 @@ class Settings(BaseSettings):
             "https://flowshare-accountant-agent-226906955613.europe-west1.run.app",
             "http://localhost:3000",
         ]
-        # Debug logging for CORS origins
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"CORS Origins configured: {origins}")
+  
         return origins
 
     class Config:

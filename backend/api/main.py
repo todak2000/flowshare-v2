@@ -200,8 +200,6 @@ async def get_open_api_endpoint(username: str = Depends(get_current_docs_user)):
 
 
 # Configure CORS (FIRST - must be first to handle preflight requests and add headers to all responses)
-logger.info(f"Configuring CORS with origins: {settings.cors_origins_list}")
-logger.info(f"Raw CORS_ORIGINS env var: {settings.cors_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
