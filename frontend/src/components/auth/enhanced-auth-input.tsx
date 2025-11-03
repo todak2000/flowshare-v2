@@ -95,7 +95,7 @@ export function EnhancedAuthInput({
           onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           className={cn(
-            "w-full rounded-lg border bg-white px-4 py-3 text-sm transition-all duration-200",
+            "w-full rounded-lg border bg-white text-black/80 placeholder:text-black/50 px-4 py-3 text-sm transition-all duration-200",
             "focus:outline-none focus:ring-2",
             icon && "pl-10",
             isPassword && "pr-20",
