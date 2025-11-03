@@ -28,15 +28,15 @@ const authPaths = [
 ]
 
 // Routes that should be blocked in production
-const devOnlyPaths = [
-  '/demo-admin',
+const devOnlyPaths: string[] = [
+  // '/demo-admin', // Now accessible in production for demo purposes
 ]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Block dev-only routes in production
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && devOnlyPaths.length > 0) {
     if (devOnlyPaths.some(path => pathname.startsWith(path))) {
       return NextResponse.redirect(new URL('/', request.url))
     }

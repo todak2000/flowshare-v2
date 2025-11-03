@@ -76,12 +76,10 @@ export default function DemoAdminPage() {
   } | null>(null);
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
 
-  // SECURITY: Block access in production environment
+  // Check for password configuration on mount
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production' &&
-        process.env.NEXT_PUBLIC_ENVIRONMENT === 'production') {
-      router.push('/');
-    }
+    // NOTE: Demo admin is now accessible in production for demo purposes
+    // Access is protected by password authentication instead
     if (!DELETE_PASSWORD) {
       setMessage({
         type: "error",
