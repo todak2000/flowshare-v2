@@ -21,9 +21,13 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 - **Automated Calculations** - API MPMS 11.1 petroleum allocation standards
 - **Event-Driven Architecture** - Asynchronous processing with AI agents
 - **Multi-Tenant SaaS** - Secure, isolated data for each organization
-- **Real-time Analytics** - ML forecasting and production insights
+- **Real-time Analytics** - Production insights
 
-**Live Link:** [https://flowshare-197665497260.europe-west1.run.app/](https://flowshare-197665497260.europe-west1.run.app/)
+**Live Application:** [https://flowshare-frontend-226906955613.europe-west1.run.app/](https://flowshare-frontend-226906955613.europe-west1.run.app/)
+
+**Demo Admin Panel:** [https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin) (Password: `FlowShare@Demo2025`)
+
+**API Documentation:** [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
 
 **Demo Video:** [Watch on Youtube](https://youtu.be/b0BSD6JAadU)
 
@@ -165,16 +169,12 @@ cd backend
 python -m pytest tests/unit/ -v
 ```
 
-✅ **44 tests passing** - See [backend/TEST_REPORT.md](./backend/TEST_REPORT.md)
-
 ### Frontend Tests
 
 ```bash
 cd frontend
 yarn test --run
 ```
-
-✅ **120 tests passing** - See [frontend/TEST_REPORT.md](./frontend/TEST_REPORT.md)
 
 ---
 
@@ -191,7 +191,7 @@ yarn test --run
 - **Framework**: FastAPI, Python 3.11+
 - **Database**: Google Cloud Firestore
 - **Events**: Google Cloud Pub/Sub
-- **AI**: Google Gemini API, Vertex AI
+- **AI**: Google Gemini API
 - **Auth**: Firebase Admin SDK
 
 ### Infrastructure
@@ -272,22 +272,46 @@ yarn test --run
 
 ## 🚢 Deployment
 
-### Frontend (Vercel)
+### Production Services
+
+All services are deployed on Google Cloud Run in the `europe-west1` region:
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Frontend** | [flowshare-frontend-226906955613.europe-west1.run.app](https://flowshare-frontend-226906955613.europe-west1.run.app) | ✅ Live |
+| **Backend API** | [flowshare-backend-api-226906955613.europe-west1.run.app](https://flowshare-backend-api-226906955613.europe-west1.run.app) | ✅ Live |
+| **Auditor Agent** | `flowshare-auditor-agent-226906955613.europe-west1.run.app` | ✅ Live |
+| **Accountant Agent** | `flowshare-accountant-agent-226906955613.europe-west1.run.app` | ✅ Live |
+| **Communicator Agent** | `flowshare-communicator-agent-226906955613.europe-west1.run.app` | ✅ Live |
+
+### Automated Deployment
+
+Deployments are automated via GitHub Actions:
+
+- **Frontend**: Triggered on push to `main` branch with changes in `frontend/` directory
+- **Backend API & Agents**: Triggered on push to `main` branch with changes in `backend/` directory
+
+### Secret Management
+
+Secrets are securely stored in **Google Cloud Secret Manager**:
+
+- `FIREBASE_CREDENTIALS_JSON` - Complete Firebase service account credentials (preferred method)
+- `GEMINI_API_KEY` - Google Gemini API key for AI features
+- `ZEPTO_TOKEN` - Email service authentication
+- `DEMO_PASSWORD` - Demo admin panel password
+- `SWAGGER_USERNAME` / `SWAGGER_PASSWORD` - API documentation access
+
+### Manual Deployment
 
 ```bash
-cd frontend
-yarn build
-vercel --prod
+# Deploy all services
+cd /path/to/flowshare-v2
+git add .
+git commit -m "Your changes"
+git push origin main
 ```
 
-### Backend (Google Cloud Run)
-
-```bash
-cd backend
-docker build -t gcr.io/flowshare-v2/api:latest .
-docker push gcr.io/flowshare-v2/api:latest
-gcloud run deploy flowshare-api --image gcr.io/flowshare-v2/api:latest
-```
+GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 
 📖 **Detailed deployment instructions**: See [backend/README.md](./backend/README.md#deployment) and [frontend/README.md](./frontend/README.md#deployment)
 

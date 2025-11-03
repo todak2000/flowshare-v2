@@ -106,13 +106,11 @@ Communicator sends reports to team
 - **[Cloud Pub/Sub](https://cloud.google.com/pubsub)** - Event messaging for async processing
 - **[Cloud BigQuery](https://cloud.google.com/bigquery)** - Analytics data warehouse
 - **[Cloud Storage](https://cloud.google.com/storage)** - File storage for reports/exports
-- **[Vertex AI](https://cloud.google.com/vertex-ai)** - Machine learning for forecasting
 - **[Firebase Admin SDK](https://firebase.google.com/docs/admin/setup)** - Authentication
 
-### AI & Machine Learning
+### AI
 
 - **[Google Gemini API](https://ai.google.dev/)** - AI-powered validation and insights
-- **[Vertex AI](https://cloud.google.com/vertex-ai)** - ML forecasting models
 
 ### Data Processing & Reporting
 
@@ -767,22 +765,80 @@ async def get_current_user_id(authorization: str = Header(...)) -> str:
 
 ## Environment Configuration
 
+### Firebase Credentials
+
+**Updated Approach (January 2025):** We now use a streamlined credential management system:
+
+#### **Development (Local)**
+Place your Firebase service account JSON file as `backend/firebase-credentials.json`:
+
+```bash
+# Download from Firebase Console → Project Settings → Service Accounts → Generate New Private Key
+cp ~/Downloads/flowshare-v2-firebase-adminsdk.json backend/firebase-credentials.json
+```
+
+The code automatically detects and loads this file during local development.
+
+#### **Production (Cloud Run)**
+Credentials are fetched from **Google Cloud Secret Manager**:
+
+```bash
+# Upload the entire service account JSON as a single secret
+cat firebase-credentials.json | gcloud secrets create FIREBASE_CREDENTIALS_JSON \
+  --data-file=- \
+  --replication-policy=automatic \
+  --project=flowshare-v2
+```
+
+The backend automatically:
+1. Checks for local `firebase-credentials.json` file (development)
+2. Falls back to fetching `FIREBASE_CREDENTIALS_JSON` from Secret Manager (production)
+3. Uses Application Default Credentials as last resort
+
+**Why this approach?**
+- ✅ No more newline formatting issues with private keys
+- ✅ Single source of truth for all Firebase credentials
+- ✅ Easy to rotate credentials
+- ✅ Works seamlessly in both dev and production
+
 ### Environment Variables
 
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | `GCP_PROJECT_ID` | Google Cloud Project ID | Yes | - |
-| `FIREBASE_PRIVATE_KEY` | Firebase Admin SDK private key | Yes | - |
-| `FIREBASE_CLIENT_EMAIL` | Firebase Admin SDK email | Yes | - |
-| `FIREBASE_PROJECT_ID` | Firebase project ID | Yes | - |
+| `GCP_REGION` | Google Cloud region | No | `europe-west1` |
+| `FIREBASE_PROJECT_ID` | Firebase project ID | No | Uses GCP_PROJECT_ID |
 | `FIRESTORE_EMULATOR_HOST` | Firestore emulator (local dev) | No | - |
 | `PUBSUB_EMULATOR_HOST` | Pub/Sub emulator (local dev) | No | - |
 | `GEMINI_API_KEY` | Google Gemini API key | Yes | - |
-| `ZEPTO_TOKEN` | ZeptoMail API token | Yes | - |
-| `VERTEX_AI_LOCATION` | Vertex AI region | No | `us-central1` |
-| `VERTEX_AI_ENDPOINT` | Vertex AI endpoint ID | No | - |
+| `ZEPTO_TOKEN` | ZeptoMail API token (email service) | Yes | - |
+| `ZEPTO_FROM_EMAIL` | Sender email address | Yes | - |
+| `SWAGGER_USERNAME` | API docs username | No | `admin` |
+| `SWAGGER_PASSWORD` | API docs password | No | - |
+| `DEMO_PASSWORD` | Demo endpoints password | No | - |
 | `ENVIRONMENT` | Environment name | No | `development` |
 | `LOG_LEVEL` | Logging level | No | `INFO` |
+
+### Secret Manager Configuration
+
+All production secrets are stored in **Google Cloud Secret Manager**:
+
+```bash
+# List all secrets
+gcloud secrets list --project=flowshare-v2
+
+# View a secret (non-sensitive fields only)
+gcloud secrets versions access latest --secret="FIREBASE_CREDENTIALS_JSON" --project=flowshare-v2 | jq '{type, project_id, client_email}'
+```
+
+**Production Secrets**:
+- `FIREBASE_CREDENTIALS_JSON` - Complete Firebase service account (JSON)
+- `GEMINI_API_KEY` - Google Gemini API key
+- `ZEPTO_TOKEN` - Email service token
+- `DEMO_PASSWORD` - Demo/test endpoint password
+- `SWAGGER_USERNAME` / `SWAGGER_PASSWORD` - API documentation access
+
+**Note:** Individual Firebase credential secrets (`FIREBASE_PRIVATE_KEY`, etc.) have been deprecated in favor of `FIREBASE_CREDENTIALS_JSON`.
 
 ---
 
@@ -853,69 +909,127 @@ See [TEST_REPORT.md](./TEST_REPORT.md) for detailed test documentation.
 
 ## Deployment
 
-### Production Deployment (Google Cloud Run)
+### Production Services (Live)
 
-#### 1. Build Container Images
+All services are deployed on **Google Cloud Run** in the `europe-west1` region:
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Backend API** | [flowshare-backend-api-226906955613.europe-west1.run.app](https://flowshare-backend-api-226906955613.europe-west1.run.app) | ✅ Live |
+| **Auditor Agent** | `flowshare-auditor-agent-226906955613.europe-west1.run.app` | ✅ Live |
+| **Accountant Agent** | `flowshare-accountant-agent-226906955613.europe-west1.run.app` | ✅ Live |
+| **Communicator Agent** | `flowshare-communicator-agent-226906955613.europe-west1.run.app` | ✅ Live |
+
+**API Documentation:** [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
+- Username: `admin`
+- Password: Stored in Secret Manager (`SWAGGER_PASSWORD`)
+
+### Automated Deployment (CI/CD)
+
+Deployments are fully automated via **GitHub Actions** workflows:
+
+**Trigger:** Push to `main` branch with changes in `backend/` directory
+
+**Workflow Files:**
+- `.github/workflows/deploy-backend-api.yml` - API service deployment
+- `.github/workflows/deploy-backend-agents.yml` - AI agents deployment
+
+**What happens automatically:**
+1. Checkout code from GitHub
+2. Authenticate to Google Cloud
+3. Build Docker images for each service
+4. Push images to Artifact Registry
+5. Deploy to Cloud Run with secrets from Secret Manager
+6. Health checks verify successful deployment
+
+### Manual Deployment
+
+If you need to deploy manually:
 
 ```bash
-# API Service
-docker build -t gcr.io/flowshare-v2/api:latest -f Dockerfile.api .
-docker push gcr.io/flowshare-v2/api:latest
-
-# Auditor Agent
-docker build -t gcr.io/flowshare-v2/auditor:latest -f Dockerfile.auditor .
-docker push gcr.io/flowshare-v2/auditor:latest
-
-# Accountant Agent
-docker build -t gcr.io/flowshare-v2/accountant:latest -f Dockerfile.accountant .
-docker push gcr.io/flowshare-v2/accountant:latest
-
-# Communicator Agent
-docker build -t gcr.io/flowshare-v2/communicator:latest -f Dockerfile.communicator .
-docker push gcr.io/flowshare-v2/communicator:latest
+# Deploy all services
+cd /path/to/flowshare-v2
+git add .
+git commit -m "Your deployment message"
+git push origin main
 ```
 
-#### 2. Deploy to Cloud Run
+GitHub Actions will handle the rest.
 
+### Pub/Sub Configuration
+
+**Topics** (already created):
 ```bash
-# API Service
-gcloud run deploy flowshare-api \
-  --image gcr.io/flowshare-v2/api:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars="GCP_PROJECT_ID=flowshare-v2,GEMINI_API_KEY=..." \
-  --service-account=flowshare-api@flowshare-v2.iam.gserviceaccount.com
-
-# Agents (similar deployment for each agent)
-gcloud run deploy flowshare-auditor \
-  --image gcr.io/flowshare-v2/auditor:latest \
-  --platform managed \
-  --region us-central1 \
-  --no-allow-unauthenticated \
-  --set-env-vars="GCP_PROJECT_ID=flowshare-v2,..." \
-  --service-account=flowshare-agents@flowshare-v2.iam.gserviceaccount.com
+production-entry-created
+reconciliation-triggered
+entry-flagged
+reconciliation-complete
+publish_production_entry_edited
+invitation-created
 ```
 
-#### 3. Configure Pub/Sub Subscriptions
+**Subscriptions** (pull-based for Cloud Run):
+```bash
+production-entry-created-sub → Auditor Agent
+reconciliation-triggered-sub → Accountant Agent
+entry-flagged-sub → Communicator Agent
+reconciliation-complete-sub → Communicator Agent
+publish_production_entry_edited-sub → Communicator Agent
+invitation-created-sub → Communicator Agent
+```
+
+### Environment Variables in Production
+
+Set via GitHub Actions workflows:
+
+```yaml
+env_vars: |
+  GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION=${{ secrets.GCP_REGION }}
+  FIREBASE_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+  ENVIRONMENT=production
+  DEBUG=false
+
+secrets: |
+  ZEPTO_TOKEN=ZEPTO_TOKEN:latest
+  GEMINI_API_KEY=GEMINI_API_KEY:latest
+  SWAGGER_USERNAME=SWAGGER_USERNAME:latest
+  SWAGGER_PASSWORD=SWAGGER_PASSWORD:latest
+  DEMO_PASSWORD=DEMO_PASSWORD:latest
+```
+
+The `FIREBASE_CREDENTIALS_JSON` secret is automatically fetched by the backend from Secret Manager at runtime.
+
+### Monitoring & Logs
+
+View logs for each service:
 
 ```bash
-# Create topics
-gcloud pubsub topics create production-entry-created
-gcloud pubsub topics create reconciliation-triggered
-gcloud pubsub topics create entry-flagged
-gcloud pubsub topics create reconciliation-complete
+# API logs
+gcloud run services logs read flowshare-backend-api --region=europe-west1 --project=flowshare-v2 --limit=50
 
-# Create subscriptions with push to Cloud Run agents
-gcloud pubsub subscriptions create auditor-sub \
-  --topic=production-entry-created \
-  --push-endpoint=https://flowshare-auditor-xxxxx-uc.a.run.app/pubsub \
-  --ack-deadline=600
+# Auditor Agent logs
+gcloud run services logs read flowshare-auditor-agent --region=europe-west1 --project=flowshare-v2 --limit=50
 
-gcloud pubsub subscriptions create accountant-sub \
-  --topic=reconciliation-triggered \
-  --push-endpoint=https://flowshare-accountant-xxxxx-uc.a.run.app/pubsub \
-  --ack-deadline=600
+# Accountant Agent logs
+gcloud run services logs read flowshare-accountant-agent --region=europe-west1 --project=flowshare-v2 --limit=50
+
+# Communicator Agent logs
+gcloud run services logs read flowshare-communicator-agent --region=europe-west1 --project=flowshare-v2 --limit=50
+```
+
+### Health Checks
+
+All services expose health check endpoints:
+
+```bash
+# API
+curl https://flowshare-backend-api-226906955613.europe-west1.run.app/
+
+# Agents
+curl https://flowshare-auditor-agent-226906955613.europe-west1.run.app/
+curl https://flowshare-accountant-agent-226906955613.europe-west1.run.app/
+curl https://flowshare-communicator-agent-226906955613.europe-west1.run.app/
 ```
 
 ---
@@ -961,7 +1075,7 @@ Copyright © 2025 FlowShare V2. All rights reserved.
 For questions or issues:
 
 - **Email**: todak2000@gmail.com
-- **Documentation**: http://localhost:8000/docs
+- **Documentation**: https://flowshare-backend-api-226906955613.europe-west1.run.app/docs
 - **GitHub Issues**: https://github.com/todak2000/flowshare-v2/issues
 
 ---

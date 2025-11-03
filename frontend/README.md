@@ -36,7 +36,7 @@ The frontend application provides:
 - **Production Management** - Submit, view, and manage production data with AI validation
 - **Reconciliation** - Trigger reconciliations and view detailed allocation results
 - **Team Management** - Invite partners, field operators, and auditors
-- **Analytics** - Production trends, forecasts, and partner breakdowns
+- **Analytics** - Production trends and partner breakdowns
 - **FlowshareGPT** - AI chat interface for data analysis
 - **SCADA Integration** - API key management and documentation
 
@@ -261,11 +261,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Firebase Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=flowshare-v2.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=flowshare-v2
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=flowshare-v2.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef123456
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 ```
 
 #### 4. Start Development Server
@@ -397,14 +395,13 @@ npm start
 - **Role Assignment**: Partner, Field Operator, Auditor
 - **Partner Limits**: Based on subscription plan
 
-### 7. Analytics & Forecasting
+### 7. Analytics
 
 **Location**: `src/app/dashboard/` (integrated)
 
 **Features**:
 - **Production Trends**: Line charts showing production over time
 - **Partner Breakdown**: Pie chart of allocation percentages
-- **ML Forecasting**: Vertex AI-powered production predictions
 - **Shrinkage Tracking**: Historical shrinkage trends
 - **Anomaly Detection**: AI-flagged entries with explanations
 
@@ -892,7 +889,50 @@ export const normalizeEmail = (email: string) => email.toLowerCase().trim()
 
 ## Deployment
 
-### Production Build
+### Production Service (Live)
+
+The frontend is deployed on **Google Cloud Run** in the `europe-west1` region:
+
+| URL | Purpose | Status |
+|-----|---------|--------|
+| [flowshare-frontend-226906955613.europe-west1.run.app](https://flowshare-frontend-226906955613.europe-west1.run.app) | Main Application | ✅ Live |
+| [.../demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin) | Demo Admin Panel | ✅ Live |
+
+**Demo Admin Panel Access:**
+- URL: `https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin`
+- Password: `FlowShare@Demo2025`
+
+### Automated Deployment (CI/CD)
+
+Deployments are fully automated via **GitHub Actions**:
+
+**Trigger:** Push to `main` branch with changes in `frontend/` directory
+
+**Workflow File:** `.github/workflows/deploy-frontend.yml`
+
+**What happens automatically:**
+1. Checkout code from GitHub
+2. Authenticate to Google Cloud
+3. Build Next.js application with production environment variables
+4. Build Docker image
+5. Push to Artifact Registry
+6. Deploy to Cloud Run with secrets from Secret Manager
+7. Health checks verify deployment
+
+### Manual Deployment
+
+```bash
+cd /path/to/flowshare-v2
+git add .
+git commit -m "Your deployment message"
+git push origin main
+```
+
+GitHub Actions will automatically deploy the frontend.
+
+### Production Build (Local)
+
+To build locally:
 
 ```bash
 yarn build
@@ -902,38 +942,73 @@ npm run build
 
 This creates an optimized production build in `.next/`.
 
-### Deploy to Vercel
+### Environment Variables
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/flowshare-v2/tree/main/frontend)
+#### Development (`.env.local`)
 
-**Environment Variables on Vercel**:
-- `NEXT_PUBLIC_API_URL` - Backend API URL
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
+```env
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:8000
 
-### Deploy to Google Cloud Run
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 
-#### 1. Build Docker Image
-
-```bash
-docker build -t gcr.io/flowshare-v2/frontend:latest .
-docker push gcr.io/flowshare-v2/frontend:latest
+# Demo Admin Password (optional for local testing)
+NEXT_PUBLIC_DEMO_ADMIN_PASSWORD=your_demo_password
 ```
 
-#### 2. Deploy to Cloud Run
+#### Production (Secret Manager)
+
+All secrets are stored in **Google Cloud Secret Manager**:
+
+- `NEXT_PUBLIC_FIREBASE_API_KEY` - Firebase web API key
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` - Firebase auth domain
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID` - Firebase project ID
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` - Firebase storage bucket
+- `NEXT_PUBLIC_DEMO_ADMIN_PASSWORD` - Demo admin panel password
+
+Secrets are injected at build time via GitHub Actions:
+
+```yaml
+build-args: |
+  NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+  NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+  NEXT_PUBLIC_DEMO_ADMIN_PASSWORD=${{ secrets.DEMO_PASSWORD }}
+```
+
+And also as runtime environment variables:
+
+```yaml
+secrets: |
+  NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest
+  NEXT_PUBLIC_DEMO_ADMIN_PASSWORD=DEMO_PASSWORD:latest
+```
+
+### Monitoring & Logs
+
+View frontend logs:
 
 ```bash
-gcloud run deploy flowshare-frontend \
-  --image gcr.io/flowshare-v2/frontend:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars="NEXT_PUBLIC_API_URL=https://api.flowshare.com"
+gcloud run services logs read flowshare-frontend --region=europe-west1 --project=flowshare-v2 --limit=50
 ```
+
+### Demo Admin Panel
+
+**NEW:** The demo admin panel is now accessible in production at `/demo-admin`.
+
+**Features:**
+- Generate sample production data for testing
+- Delete all demo data
+- Password protected for security
+- Useful for demos and testing
+
+**Access Control:**
+- Protected by password stored in Secret Manager
+- Middleware allows access in production (previously development-only)
+- No special configuration needed
 
 ---
 
@@ -1021,20 +1096,12 @@ yarn type-check
 npm run type-check
 ```
 
-### Test Status
-
-✅ **All Tests Passing: 120 tests (100%)**
 
 **Test Files**:
 - `src/lib/__tests__/utils.test.ts` (51 tests) - Utility functions
 - `src/lib/__tests__/validation.test.ts` (38 tests) - Input validation
 - `src/lib/__tests__/error-handler.test.ts` (31 tests) - Error handling
 
-### Test Execution Time
-
-- Total Duration: **~2.4 seconds**
-- Transform: 740ms
-- Tests: 295ms
 
 ### Test Structure
 
@@ -1052,10 +1119,6 @@ frontend/src/
 │   └── setup.ts                # Test configuration & mocks
 └── vitest.config.ts             # Vitest configuration
 ```
-
-### Viewing Test Report
-
-See [TEST_REPORT.md](./TEST_REPORT.md) for detailed test documentation.
 
 ### Key Test Features
 
@@ -1086,10 +1149,8 @@ Copyright © 2025 FlowShare V2. All rights reserved.
 
 For questions or issues:
 
-- **Email**: support@flowshare.com
-- **Documentation**: https://docs.flowshare.com
-- **GitHub Issues**: https://github.com/yourusername/flowshare-v2/issues
+- **Email**: todak2000@gmail.com
+- **GitHub Issues**: https://github.com/todak2000/flowshare-v2/issues
 
 ---
 
-**Built with ❤️ for the Oil & Gas Industry**
