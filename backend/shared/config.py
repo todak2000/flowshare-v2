@@ -84,6 +84,7 @@ class Settings(BaseSettings):
         # Look for .env file in the backend directory (parent of shared)
         env_file = str(Path(__file__).parent.parent / ".env")
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields from .env
 
 
 # Global settings instance
