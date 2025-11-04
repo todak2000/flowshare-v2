@@ -19,6 +19,7 @@ from shared.models.production import (
 )
 from shared.models.audit_log import AuditAction
 from shared.utils.audit_logger import log_audit_event
+from shared.utils.cache import user_cache
 from typing import List, Optional, Dict
 from pydantic import BaseModel
 
@@ -39,7 +40,16 @@ async def get_user_role_and_partner(user_id: str) -> tuple[str, Optional[str], s
     Returns: (role, partner_id_for_filtering, user_doc_id)
     - For partners: partner_id_for_filtering is their user_doc_id (they own their data)
     - For field_operators: partner_id_for_filtering is their partner_id field (they work for a partner)
+
+    Uses cache to reduce Firestore queries on repeated requests.
     """
+    # Check cache first
+    cache_key = f"user_role_partner:{user_id}"
+    cached_result = user_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+
+    # Cache miss - query Firestore
     db = get_firestore()
     users_ref = db.collection(FirestoreCollections.USERS)
 
@@ -58,7 +68,12 @@ async def get_user_role_and_partner(user_id: str) -> tuple[str, Optional[str], s
     else:
         partner_id_for_filtering = user_data.get("partner_id")
 
-    return role, partner_id_for_filtering, user_doc.id
+    result = (role, partner_id_for_filtering, user_doc.id)
+
+    # Cache the result for 5 minutes
+    user_cache.set(cache_key, result)
+
+    return result
 
 
 @router.post("/entries", response_model=ProductionEntry, status_code=201)
@@ -178,38 +193,35 @@ async def list_production_entries(
     if status:
         query = query.where("status", "==", status.value)
 
-    # Execute query to get all matching entries (we'll filter in memory for complex conditions)
+    # OPTIMIZATION: Push date filters to Firestore to reduce data transfer
+    if start_date:
+        start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        query = query.where("measurement_date", ">=", start_dt)
+
+    if end_date:
+        end_dt = datetime.fromisoformat(end_date).replace(
+            hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc
+        )
+        query = query.where("measurement_date", "<=", end_dt)
+
+    # Execute query with ordering
     query = query.order_by("measurement_date", direction="DESCENDING")
     entries_query = await query.get()
 
     # Convert to list and apply additional filters in memory
+    # Note: Date filtering is now handled in Firestore query for better performance
     all_entries = []
     for doc in entries_query:
         entry_data = doc.to_dict()
         entry = ProductionEntry(id=doc.id, **entry_data)
 
-        # Date filter
-        if start_date or end_date:
-            entry_date = entry.measurement_date  # already aware (from Firestore)
-
-            if start_date:
-                start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
-                if entry_date < start_dt:
-                    continue
-
-            if end_date:
-                end_dt = datetime.fromisoformat(end_date).replace(
-                    hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc
-                )
-                if entry_date > end_dt:
-                    continue
-        # Temperature filter
+        # Temperature filter (must be done in memory as Firestore doesn't support multiple range queries)
         if min_temperature is not None and entry.temperature < min_temperature:
             continue
         if max_temperature is not None and entry.temperature > max_temperature:
             continue
 
-        # BSW filter
+        # BSW filter (must be done in memory)
         if min_bsw is not None and entry.bsw_percent < min_bsw:
             continue
         if max_bsw is not None and entry.bsw_percent > max_bsw:
@@ -369,13 +381,7 @@ async def get_production_stats(
     query = entries_ref.where("tenant_id", "==", tenant_id)
     query = query.where("status", "==", ProductionEntryStatus.APPROVED.value)
 
-    # Get all approved entries
-    entries_query = await query.get()
-
-    # Calculate volumes by partner
-    partner_volumes: Dict[str, float] = defaultdict(float)
-    partner_counts: Dict[str, int] = defaultdict(int)
-
+    # OPTIMIZATION: Push date filters to Firestore query
     start_dt = None
     end_dt = None
 
@@ -383,21 +389,24 @@ async def get_production_stats(
         start_dt = datetime.fromisoformat(start_date)
         if start_dt.tzinfo is None:
             start_dt = start_dt.replace(tzinfo=timezone.utc)
+        query = query.where("measurement_date", ">=", start_dt)
 
     if end_date:
         end_dt = datetime.fromisoformat(end_date)
         if end_dt.tzinfo is None:
             end_dt = end_dt.replace(tzinfo=timezone.utc)
+        query = query.where("measurement_date", "<=", end_dt)
+
+    # Get filtered approved entries
+    entries_query = await query.get()
+
+    # Calculate volumes by partner
+    partner_volumes: Dict[str, float] = defaultdict(float)
+    partner_counts: Dict[str, int] = defaultdict(int)
+
     for doc in entries_query:
         entry_data = doc.to_dict()
         entry = ProductionEntry(id=doc.id, **entry_data)
-        entry_date = entry.measurement_date
-
-        # Apply date filters
-        if start_dt and entry_date < start_dt:
-            continue
-        if end_dt and entry_date > end_dt:
-            continue
         # Calculate net volume (gross - BSW)
         net_volume = entry.gross_volume * (1 - entry.bsw_percent / 100) * entry.meter_factor
         partner_volumes[entry.partner_id] += net_volume

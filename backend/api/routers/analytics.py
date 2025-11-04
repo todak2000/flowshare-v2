@@ -43,6 +43,9 @@ async def get_production_trends(
         if partner_id:
             query = query.where("partner_id", "==", partner_id)
 
+        # OPTIMIZATION: Use select() to fetch only required fields
+        query = query.select(["measurement_date", "partner_id", "gross_volume", "bsw_percent", "api_gravity"])
+
         # Execute query
         entries = await query.get()
 
@@ -109,6 +112,10 @@ async def get_analytics_summary(
 
         if partner_id:
             query = query.where("partner_id", "==", partner_id)
+
+        # OPTIMIZATION: Use select() to fetch only required fields, reducing data transfer
+        # Note: Firestore Python SDK uses .select() for field masking
+        query = query.select(["partner_id", "gross_volume", "bsw_percent"])
 
         # Execute query
         entries = await query.get()

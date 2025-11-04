@@ -12,6 +12,7 @@ from shared.auth import get_current_user_id, get_user_role
 from shared.database import get_firestore, FirestoreCollections
 from shared.models.user import UserRole
 from shared.models.production import ProductionEntryStatus
+from shared.utils.cache import query_cache
 
 router = APIRouter()
 
@@ -43,7 +44,15 @@ async def get_dashboard_stats(
         - Active reconciliations count
         - Anomalies detected this month
         - Anomalies trend (% change from last month)
+
+    Uses cache with 1-minute TTL to reduce computation on frequent page refreshes.
     """
+    # Check cache first (1 minute TTL)
+    cache_key = f"dashboard_stats:{user_id}:{user_role}"
+    cached_result = query_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+
     db = get_firestore()
 
     # Get user's tenant
@@ -156,7 +165,7 @@ async def get_dashboard_stats(
             if status == "pending_review":
                 pending_reconciliations += 1
 
-    return DashboardStats(
+    result = DashboardStats(
         total_production=round(total_production_this_month, 2),
         production_trend=round(production_trend, 2),
         active_reconciliations=active_reconciliations,
@@ -166,6 +175,11 @@ async def get_dashboard_stats(
         total_entries_this_month=len(this_month_entries),
         total_entries_last_month=len(last_month_entries),
     )
+
+    # Cache result for 1 minute
+    query_cache.set(cache_key, result, ttl_seconds=60)
+
+    return result
 
 
 class TeamMember(BaseModel):
