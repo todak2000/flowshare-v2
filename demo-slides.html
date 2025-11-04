@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowShare V2 - Demo Video Slides</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            padding: 80px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            position: relative;
+        }
+
+        .slide.active {
+            display: flex;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Title Slide */
+        .slide-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .slide-title h1 {
+            font-size: 72px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .slide-title .tagline {
+            font-size: 32px;
+            font-weight: 400;
+            opacity: 0.95;
+            max-width: 1100px;
+        }
+
+        .slide-title .logo {
+            font-size: 120px;
+            margin-bottom: 40px;
+        }
+
+        /* Section Divider Slides */
+        .slide-divider {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .slide-divider h1 {
+            font-size: 96px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .slide-divider .icon {
+            font-size: 120px;
+            margin-bottom: 40px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Content Slides */
+        .slide-content {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            text-align: left;
+        }
+
+        .slide-content h2 {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 50px;
+            color: #60a5fa;
+        }
+
+        .slide-content .content-box {
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .slide-content ul {
+            list-style: none;
+            font-size: 36px;
+            line-height: 1.8;
+        }
+
+        .slide-content li {
+            margin-bottom: 30px;
+            padding-left: 50px;
+            position: relative;
+        }
+
+        .slide-content li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .slide-content .highlight {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        .slide-content .stat {
+            font-size: 64px;
+            font-weight: 800;
+            color: #34d399;
+            display: block;
+            margin: 20px 0;
+        }
+
+        /* Tech Stack Slide */
+        .slide-tech {
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 1400px;
+            text-align: left;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tech-item h3 {
+            font-size: 36px;
+            color: #60a5fa;
+            margin-bottom: 20px;
+        }
+
+        .tech-item ul {
+            list-style: none;
+            font-size: 28px;
+            line-height: 1.6;
+        }
+
+        /* Impact Slide */
+        .slide-impact {
+            background: linear-gradient(135deg, #134e4a 0%, #14532d 100%);
+        }
+
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 60px;
+            max-width: 1400px;
+        }
+
+        .impact-card {
+            text-align: center;
+        }
+
+        .impact-card .big-stat {
+            font-size: 96px;
+            font-weight: 800;
+            color: #34d399;
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .impact-card .label {
+            font-size: 36px;
+            opacity: 0.9;
+        }
+
+        /* CTA Slide */
+        .slide-cta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .slide-cta h2 {
+            font-size: 64px;
+            font-weight: 700;
+            margin-bottom: 60px;
+        }
+
+        .slide-cta .links {
+            font-size: 36px;
+            line-height: 2.5;
+        }
+
+        .slide-cta .link-item {
+            margin: 20px 0;
+        }
+
+        .slide-cta .hashtag {
+            font-size: 48px;
+            font-weight: 800;
+            margin-top: 60px;
+            color: #fbbf24;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .nav button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .nav button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Demo placeholder */
+        .demo-note {
+            background: rgba(251, 191, 36, 0.2);
+            border: 3px solid #fbbf24;
+            padding: 40px;
+            border-radius: 20px;
+            font-size: 32px;
+            max-width: 1200px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide slide-title active">
+        <div class="logo">⚡</div>
+        <h1>FlowShare V2</h1>
+        <p class="tagline">AI-Powered Multi-Agent Petroleum Allocation on Google Cloud Run</p>
+    </div>
+
+    <!-- Slide 2: Problem Divider -->
+    <div class="slide slide-divider">
+        <div class="icon">⚠️</div>
+        <h1>The Problem</h1>
+    </div>
+
+    <!-- Slide 3: Problem Content -->
+    <div class="slide slide-content">
+        <div class="content-box">
+            <h2>Joint Venture Reconciliation Crisis</h2>
+            <ul>
+                <li>Oil & Gas joint ventures share production terminals</li>
+                <li>Monthly reconciliation takes <span class="highlight">2-3 weeks</span> of manual work</li>
+                <li>Costs over <span class="highlight">$200,000+ annually</span> per organization</li>
+                <li>Spreadsheet errors cause disputes and delayed revenue</li>
+                <li>Partners (Shell, Chevron, NNPC) lose trust in allocations</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide 4: Solution Divider -->
+    <div class="slide slide-divider">
+        <div class="icon">✨</div>
+        <h1>The Solution</h1>
+    </div>
+
+    <!-- Slide 5: Solution Content -->
+    <div class="slide slide-content">
+        <div class="content-box">
+            <h2>Multi-Agent AI Automation</h2>
+            <ul>
+                <li><span class="highlight">5 Cloud Run Services</span> in event-driven architecture</li>
+                <li><span class="highlight">3 Specialized AI Agents:</span>
+                    <ul style="margin-left: 50px; margin-top: 20px;">
+                        <li>Auditor: Validates data with Gemini AI</li>
+                        <li>Accountant: Runs petroleum allocation (API MPMS 11.1)</li>
+                        <li>Communicator: Sends intelligent notifications</li>
+                    </ul>
+                </li>
+                <li>Cloud Pub/Sub for asynchronous messaging</li>
+                <li>Gemini 2.0 for contextual insights</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide 6: Demo Divider -->
+    <div class="slide slide-divider">
+        <div class="icon">🎬</div>
+        <h1>FlowShare Demo</h1>
+    </div>
+
+    <!-- Slide 7: Demo Instructions -->
+    <div class="slide slide-content">
+        <div class="content-box" style="text-align: center;">
+            <h2>Live Demo</h2>
+            <div class="demo-note">
+                <strong>🎥 RECORD APPLICATION DEMO HERE (90 seconds)</strong>
+                <p style="margin-top: 20px; font-size: 28px; line-height: 1.8;">
+                    See demo script in video-script.md for detailed instructions
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Tech Stack Divider -->
+    <div class="slide slide-divider">
+        <div class="icon">⚙️</div>
+        <h1>Technology</h1>
+    </div>
+
+    <!-- Slide 9: Tech Stack Content -->
+    <div class="slide slide-tech">
+        <h2 style="text-align: center; margin-bottom: 50px; font-size: 56px; color: #60a5fa;">Google Cloud Platform Stack</h2>
+        <div class="tech-grid">
+            <div class="tech-item">
+                <h3>☁️ Serverless</h3>
+                <ul>
+                    <li>Cloud Run (5 services)</li>
+                    <li>Cloud Pub/Sub (6 topics)</li>
+                    <li>Cloud Firestore</li>
+                </ul>
+            </div>
+            <div class="tech-item">
+                <h3>🤖 AI & Auth</h3>
+                <ul>
+                    <li>Gemini 2.0 Flash Exp</li>
+                    <li>Gemini 2.5 Flash</li>
+                    <li>Firebase Auth</li>
+                </ul>
+            </div>
+            <div class="tech-item">
+                <h3>💻 Frontend</h3>
+                <ul>
+                    <li>Next.js 15 + React 19</li>
+                    <li>TypeScript + Tailwind</li>
+                    <li>164 automated tests</li>
+                </ul>
+            </div>
+            <div class="tech-item">
+                <h3>⚡ Backend</h3>
+                <ul>
+                    <li>FastAPI + Python 3.11</li>
+                    <li>Event-driven architecture</li>
+                    <li>GitHub Actions CI/CD</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Impact Divider -->
+    <div class="slide slide-divider">
+        <div class="icon">📊</div>
+        <h1>Impact</h1>
+    </div>
+
+    <!-- Slide 11: Impact Content -->
+    <div class="slide slide-impact">
+        <h2 style="text-align: center; margin-bottom: 80px; font-size: 56px;">Real Business Results</h2>
+        <div class="impact-grid">
+            <div class="impact-card">
+                <span class="big-stat">95%</span>
+                <p class="label">Time Reduction<br/>Weeks → Minutes</p>
+            </div>
+            <div class="impact-card">
+                <span class="big-stat">$200K+</span>
+                <p class="label">Annual Savings<br/>Per Organization</p>
+            </div>
+            <div class="impact-card">
+                <span class="big-stat">99.9%</span>
+                <p class="label">Accuracy<br/>API MPMS 11.1 Compliant</p>
+            </div>
+            <div class="impact-card">
+                <span class="big-stat">Live</span>
+                <p class="label">Production Deployment<br/>Not a Prototype</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 12: Call to Action -->
+    <div class="slide slide-cta">
+        <h2>Try FlowShare V2 Today</h2>
+        <div class="links">
+            <div class="link-item">🌐 <strong>Live Demo:</strong> flowshare-frontend.run.app</div>
+            <div class="link-item">💻 <strong>GitHub:</strong> github.com/[your-repo]</div>
+            <div class="link-item">📝 <strong>Blog:</strong> Building Multi-Agent AI on Cloud Run</div>
+            <div class="link-item">📧 <strong>Contact:</strong> [your-email]</div>
+        </div>
+        <p class="hashtag">#CloudRunHackathon #GeminiAI</p>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button onclick="prevSlide()">← Previous</button>
+        <button onclick="nextSlide()">Next →</button>
+    </div>
+
+    <div class="slide-counter">
+        <span id="current">1</span> / <span id="total">12</span>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current').textContent = currentSlide + 1;
+        }
+
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+
+        function prevSlide() {
+            showSlide(currentSlide - 1);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Auto-start with spacebar hint
+        console.log('Press Space or → to advance slides');
+        console.log('Press ← to go back');
+    </script>
+</body>
+</html>

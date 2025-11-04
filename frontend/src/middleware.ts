@@ -17,8 +17,14 @@ const protectedPaths = [
   '/partners',
   '/settings',
   '/profile',
-  '/payment',
   '/reports',
+]
+
+// Payment routes that are PUBLIC (no auth required)
+// These allow users to select plan and checkout BEFORE registering
+const publicPaymentPaths = [
+  '/payment/select-plan',
+  '/payment/checkout',
 ]
 
 // Routes that should redirect authenticated users
@@ -46,9 +52,12 @@ export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth-token')
   const isAuthenticated = !!authToken
 
-  // Protect routes that require authentication
+  // Check if this is a public payment path (select-plan, checkout)
+  const isPublicPaymentPath = publicPaymentPaths.some(path => pathname.startsWith(path))
+
+  // Protect routes that require authentication (excluding public payment paths)
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
-  if (isProtectedPath && !isAuthenticated) {
+  if (isProtectedPath && !isAuthenticated && !isPublicPaymentPath) {
     // Store the intended destination
     const url = new URL('/auth/login', request.url)
     url.searchParams.set('redirect', pathname)

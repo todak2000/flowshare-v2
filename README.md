@@ -44,9 +44,92 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 ---
 
 ## 🏗️ Architecture Overview
+
+FlowShare V2 is built on a **serverless, event-driven, multi-agent architecture** deployed entirely on Google Cloud Platform.
+
 <p align="center">
-  <img src="archi.svg" alt="Architecture Deep Dive" width="100%">
+  <img src="archi.svg" alt="Architecture Diagram" width="100%">
 </p>
+
+### Architecture Highlights
+
+- **5 Cloud Run Services**: Frontend (Next.js), Backend API (FastAPI), 3 AI Agents
+- **Event-Driven**: Asynchronous communication via Cloud Pub/Sub (6 topics)
+- **Multi-Agent System**: Specialized agents (Auditor, Accountant, Communicator)
+- **Serverless & Auto-Scaling**: Scale from 0 to 10 instances automatically
+- **Multi-Tenant**: Secure data isolation per organization
+
+### Cloud Run Architecture Pattern
+
+Our agents use **Cloud Run Services** (not Worker Pools or Jobs) with **Pub/Sub pull subscriptions**:
+
+```python
+# Each agent runs a FastAPI server for health checks
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/")
+async def health_check():
+    return {"status": "healthy"}
+
+# Plus a background task that pulls from Pub/Sub
+async def run_subscriber_worker():
+    subscriber = SubscriberClient()
+    future = subscriber.subscribe(subscription_path, callback=process_message)
+    await asyncio.Event().wait()  # Keep alive
+```
+
+**Why this pattern?**
+- ✅ Health endpoints for Cloud Run monitoring
+- ✅ Scale to zero when idle ($0 cost)
+- ✅ Instant scale-up when events arrive
+- ✅ Standard deployment (no special Worker Pool setup)
+
+📖 **Detailed Architecture**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete technical deep-dive
+
+---
+
+## 🚀 Why Cloud Run?
+
+After evaluating multiple deployment options (GKE, Compute Engine, Cloud Run Jobs, Cloud Run Worker Pools), we chose **Cloud Run Services + Pub/Sub** for our multi-agent architecture.
+
+### Key Benefits
+
+**💰 Cost Efficiency**
+- Agents scale to **zero when idle** (no events = $0 cost)
+- Only pay for actual compute time (not idle instances)
+- Development: ~$5/month | Production: ~$50/month
+- vs GKE: Would be ~$200/month minimum
+
+**⚡ Auto-Scaling**
+- **0 → 10 instances** in seconds when events arrive
+- Each agent scales independently based on its queue depth
+- No manual capacity planning needed
+
+**🚀 Fast Deployment**
+- **2-3 minutes** from commit to production
+- GitHub Actions → Docker build → Cloud Run deploy
+- Zero-downtime deployments with automatic rollback
+
+**🛠️ Developer Experience**
+- Run standard Python web frameworks (FastAPI, Flask)
+- Test locally with Docker
+- Built-in HTTPS and health checks
+- Simple CI/CD integration
+
+### Real-World Performance
+
+**Scenario**: Monday morning, 50 partners submit production data simultaneously
+
+| Without Multi-Agent (Monolith) | With Multi-Agent (Cloud Run) |
+|--------------------------------|------------------------------|
+| 50 requests queue up | 50 requests complete in <500ms |
+| Each waits for validation (3-5s) | Validation happens async |
+| 5+ minute delays | Users see success immediately |
+| Single bottleneck | Independent scaling per agent |
+
+**Result**: Users get instant responses, processing happens in background
+
+📖 **Why Cloud Run?**: See [ARCHITECTURE.md - Why Cloud Run](./ARCHITECTURE.md#why-cloud-run) for detailed analysis
 
 ---
 
@@ -204,6 +287,139 @@ yarn test --run
 
 ---
 
+## ☁️ Google Cloud Platform Services
+
+FlowShare V2 leverages **7 GCP services** strategically integrated for a production-grade, serverless architecture:
+
+### Core Services (Active)
+
+**1. Cloud Run** - Serverless Container Platform
+- **5 microservices** deployed (frontend, API, 3 agents)
+- **Auto-scaling**: 0-10 instances per service
+- **Region**: europe-west1
+- **Total resources**: 4.5 Gi RAM, 8 vCPUs allocated across services
+- **Why**: Serverless compute with scale-to-zero cost savings
+
+**2. Cloud Pub/Sub** - Event Messaging
+- **6 topics** for inter-service communication
+- **6 pull subscriptions** for agents
+- **Delivery**: At-least-once with retry logic
+- **Why**: Decouples services, enables event-driven architecture
+
+**3. Cloud Firestore** - NoSQL Database
+- **9 collections** for multi-tenant data
+- **Composite indexes** for optimized queries
+- **Multi-region replication** for reliability
+- **Why**: Serverless database with flexible schema and built-in scaling
+
+**4. Cloud Secret Manager** - Secrets Storage
+- **5+ secrets** (API keys, service accounts, passwords)
+- **Version control** for secrets
+- **IAM-based access** control
+- **Why**: Secure credential management without hardcoding
+
+**5. Artifact Registry** - Container Images
+- **5 image repositories** (one per service)
+- **Vulnerability scanning** enabled
+- **Tagged with git SHA** for traceability
+- **Why**: Private Docker registry integrated with Cloud Run
+
+**6. Gemini API** - AI Models
+- **2 models used**: gemini-2.0-flash-exp (analysis), gemini-2.5-flash (chat)
+- **Use cases**: Anomaly detection, reconciliation insights, FlowshareGPT
+- **Rate limiting**: 60 requests/min with retry logic
+- **Why**: Production-grade AI without training custom models
+
+**7. Firebase Authentication** - User Management
+- **JWT tokens** for API authentication
+- **Custom claims** for RBAC (role-based access control)
+- **Email/password** authentication
+- **Why**: Managed auth service with client + server SDKs
+
+### Planned Services (Next Phase)
+
+- ⏳ **BigQuery**: Analytics data warehouse for historical production analysis
+- ⏳ **Cloud Storage**: Long-term archival of reconciliation exports
+- ⏳ **Cloud Monitoring**: Custom dashboards, SLIs, SLOs
+- ⏳ **Cloud Logging**: Structured log aggregation
+- ⏳ **Cloud Trace**: Distributed tracing across services
+- ⏳ **Vertex AI**: Custom ML models for production forecasting
+
+📖 **Complete GCP Integration**: See [ARCHITECTURE.md - GCP Services](./ARCHITECTURE.md#google-cloud-platform-services) for detailed breakdown
+
+---
+
+## 🎓 Key Learnings
+
+### What Worked Exceptionally Well ✅
+
+**Event-Driven Architecture**
+- Pub/Sub decoupling made the system incredibly resilient
+- When Auditor agent went down for 30 minutes, messages queued and were processed when it came back up - zero data loss
+- **Takeaway**: For any async processing, event-driven > direct API calls
+
+**Cloud Run Auto-Scaling**
+- Scale-to-zero provided real cost savings
+- Development costs <$5/month because agents are idle 23 hours/day
+- **Takeaway**: Serverless is perfect for variable, event-driven workloads
+
+**Firestore for Multi-Tenant SaaS**
+- NoSQL flexibility + built-in scaling is powerful
+- Adding new fields (like `ai_analysis`) required zero migrations
+- **Takeaway**: For SaaS with evolving schema, NoSQL > SQL
+
+**FastAPI + Background Tasks**
+- Running Pub/Sub subscriber as background task in FastAPI works great
+- Single service handles HTTP (health checks) + Pub/Sub (events)
+- **Takeaway**: No need for separate worker processes, simplifies deployment
+
+### What Was Challenging ⚠️
+
+**Cold Starts**
+- First request after idle took 2-3 seconds
+- **Solution**: Optimized Docker images (multi-stage builds, 60% size reduction)
+- **Result**: Cold start acceptable for background agents (~2s)
+- **Lesson**: For user-facing APIs, set min-instances=1
+
+**Gemini API Rate Limiting**
+- Hit rate limits during high-volume testing
+- **Solution**: Exponential backoff retry, request queuing, used different models
+- **Result**: Zero rate limit errors in production
+- **Lesson**: Always implement retry logic for external APIs
+
+**Pub/Sub Message Ordering**
+- Messages don't arrive in order (e.g., "edit" before "create")
+- **Solution**: Include full entry data in message payload, use Firestore as source of truth
+- **Result**: Agents are idempotent, handle out-of-order messages correctly
+- **Lesson**: Don't rely on Pub/Sub ordering unless explicitly configured
+
+**Secret Manager JSON Formatting**
+- Firebase credentials JSON was getting corrupted (newlines, escaping)
+- **Solution**: Proper base64 encoding, heredoc syntax with `gcloud secrets create`
+- **Result**: Reliable secret storage and retrieval
+- **Lesson**: Test secret storage/retrieval in CI/CD pipeline
+
+### What We Would Do Differently 🔄
+
+**1. Observability from Day One**
+- Missing: Cloud Monitoring dashboards, structured logging, distributed tracing
+- **Impact**: Difficult to debug production issues, can't prove "production-ready" claims
+- **Fix**: Implement observability stack (Monitoring, Logging, Trace) immediately in next phase
+
+**2. Agent Testing**
+- Agents have limited unit tests
+- **Impact**: Risky deployments, no regression testing for agent logic
+- **Fix**: Comprehensive agent tests (mocking Pub/Sub, Firestore, Gemini)
+
+**3. Load Testing**
+- Only tested with ~50 concurrent users
+- **Impact**: Don't know true scalability limits
+- **Fix**: Use Locust or k6 to load test with 1000+ concurrent users
+
+📖 **Complete Learnings**: See [ARCHITECTURE.md - Key Learnings](./ARCHITECTURE.md#key-learnings) for full retrospective
+
+---
+
 ## 🔑 Key Features
 
 ### 1. Production Data Management
@@ -314,6 +530,95 @@ git push origin main
 GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 
 📖 **Detailed deployment instructions**: See [backend/README.md](./backend/README.md#deployment) and [frontend/README.md](./frontend/README.md#deployment)
+
+---
+
+## 🧑‍💻 Try It Out - Demo Guide
+
+### Quick Start (No Setup Required)
+
+**Live Application**: [https://flowshare-frontend-226906955613.europe-west1.run.app/](https://flowshare-frontend-226906955613.europe-west1.run.app/)
+
+### Option 1: Demo Admin Access (Pre-loaded Data)
+
+**URL**: [https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin)
+
+**Password**: `FlowShare@Demo2025`
+
+**What's Included**:
+- Pre-loaded joint venture with 4 partners (Shell, Chevron, NNPC, TotalEnergies)
+- Sample production entries (approved, flagged, pending)
+- Completed reconciliations with AI insights
+- Full access to all features
+
+**Test Scenarios**:
+1. **View Dashboard** - See production trends and analytics
+2. **Submit New Entry** - Add production data, watch AI validation
+3. **Trigger Reconciliation** - Run allocation for current period
+4. **Review AI Insights** - Check Gemini-generated analysis
+5. **Export Report** - Download Excel with detailed calculations
+6. **Chat with FlowshareGPT** - Ask questions about production data
+
+### Option 2: Create Your Own Account
+
+1. **Sign Up**: [Register here](https://flowshare-frontend-226906955613.europe-west1.run.app/auth/signup)
+2. **Create Organization**: Set up your joint venture
+3. **Invite Partners**: Add team members via email
+4. **Submit Data**: Enter production measurements
+5. **Run Reconciliation**: Allocate volumes across partners
+
+### API Documentation & Testing
+
+**Swagger UI**: [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
+
+**Authentication**:
+- Username: `admin`
+- Password: (Contact for API access or use demo account token)
+
+**Example API Request**:
+```bash
+# Get production entries (requires JWT token)
+curl -X GET "https://flowshare-backend-api-226906955613.europe-west1.run.app/api/production-entries" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# SCADA API key authentication
+curl -X POST "https://flowshare-backend-api-226906955613.europe-west1.run.app/api/scada/production" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "measurement_date": "2025-01-15",
+    "gross_volume": 25000,
+    "bsw_percent": 5.2,
+    "temperature": 85,
+    "api_gravity": 35.5
+  }'
+```
+
+### Recommended Test Flow
+
+**For Developers**:
+1. Explore API docs (Swagger UI)
+2. Test production entry submission
+3. Watch Auditor Agent validate data (check AI analysis)
+4. Trigger reconciliation
+5. Review Accountant Agent results (Gemini insights)
+6. Check email notifications (Communicator Agent)
+
+**For Business Users**:
+1. Use Demo Admin access
+2. Navigate dashboard (production trends)
+3. Submit test production entry
+4. Run reconciliation for current month
+5. Download Excel export
+6. Chat with FlowshareGPT
+
+### Demo Video
+
+Watch full walkthrough: [YouTube Demo (3 minutes)](https://youtu.be/b0BSD6JAadU)
+
+### Blog Post
+
+Technical deep-dive: [Building FlowShare on Google Cloud Run](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
 
 ---
 
