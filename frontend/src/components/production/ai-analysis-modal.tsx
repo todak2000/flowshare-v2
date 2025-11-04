@@ -112,12 +112,13 @@ export function AIAnalysisModal({ entry, open, onClose }: AIAnalysisModalProps) 
 
             {/* Render HTML content safely */}
             <div
-              className="prose prose-sm dark:prose-invert max-w-none font-mono
+              className="prose prose-sm prose-slate dark:prose-invert max-w-none font-mono
                          prose-h3:text-base prose-h3:font-semibold prose-h3:mt-4 prose-h3:mb-2 prose-h3:text-slate-900 dark:prose-h3:text-slate-100
                          prose-h2:text-lg prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-3 prose-h2:text-slate-900 dark:prose-h2:text-slate-100
-                         prose-p:my-2 prose-p:text-slate-800 dark:prose-p:text-slate-300
-                         prose-ul:my-2 prose-li:my-1 prose-li:text-slate-800 dark:prose-li:text-slate-300
-                         prose-strong:text-primary prose-strong:font-bold"
+                         prose-p:my-2 prose-p:text-slate-700 dark:prose-p:text-slate-300
+                         prose-ul:my-2 prose-li:my-1 prose-li:text-slate-700 dark:prose-li:text-slate-300
+                         prose-strong:text-slate-900 dark:prose-strong:text-slate-100 prose-strong:font-bold
+                         text-slate-700 dark:text-slate-300"
               dangerouslySetInnerHTML={{ __html: cleanHtmlString(entry.ai_analysis) }}
             />
           </div>
