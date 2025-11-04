@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Deny all direct client access to Firestore.
+    // This application uses a backend-only architecture where all Firestore
+    // access is performed through the FastAPI backend using Firebase Admin SDK.
+    //
+    // The backend enforces:
+    // - Authentication via Firebase ID token verification
+    // - Tenant isolation (users can only access their tenant's data)
+    // - Role-based access control (coordinator, partner, field_operator, auditor)
+    // - Business logic validation
+    //
+    // The Firebase Admin SDK (service account) has full access regardless of these rules.
+    // These rules prevent clients from bypassing the API to access data directly.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 import json
 import logging
 from ..config import settings
+from ..utils.circuit_breaker import async_retry, pubsub_breaker, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,18 @@ def get_publisher() -> pubsub_v1.PublisherClient:
     return _publisher
 
 
+@async_retry(
+    max_attempts=3,
+    initial_delay=1.0,
+    max_delay=10.0,
+    exceptions=(Exception,)
+)
 async def publish_message(topic_name: str, data: Dict[str, Any], **attributes) -> str:
     """
-    Publish a message to a Pub/Sub topic.
+    Publish a message to a Pub/Sub topic with retry logic and circuit breaker.
+
+    Retries up to 3 times with exponential backoff.
+    Circuit breaker opens after 5 consecutive failures.
 
     Args:
         topic_name: Name of the topic (not full path)
@@ -29,19 +39,27 @@ async def publish_message(topic_name: str, data: Dict[str, Any], **attributes) -
 
     Returns:
         Message ID
+
+    Raises:
+        CircuitBreakerError: If circuit breaker is open
+        Exception: If all retry attempts fail
     """
-    publisher = get_publisher()
-    topic_path = publisher.topic_path(settings.gcp_project_id, topic_name)
-
-    # Encode message as JSON
-    message_bytes = json.dumps(data).encode("utf-8")
-
-    # Publish message
     try:
-        future = publisher.publish(topic_path, message_bytes, **attributes)
-        message_id = future.result()
-        logger.info(f"Published message {message_id} to {topic_name}")
-        return message_id
+        async with pubsub_breaker:
+            publisher = get_publisher()
+            topic_path = publisher.topic_path(settings.gcp_project_id, topic_name)
+
+            # Encode message as JSON
+            message_bytes = json.dumps(data).encode("utf-8")
+
+            # Publish message (this returns a Future)
+            future = publisher.publish(topic_path, message_bytes, **attributes)
+            message_id = future.result()  # Block until published
+            logger.info(f"Published message {message_id} to {topic_name}")
+            return message_id
+    except CircuitBreakerError as e:
+        logger.error(f"Circuit breaker open for Pub/Sub: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Failed to publish message to {topic_name}: {str(e)}")
         raise

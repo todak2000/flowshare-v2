@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any, List, AsyncGenerator
 import asyncio
 import logging
 from shared.config import settings
+from shared.utils.circuit_breaker import async_retry, gemini_breaker, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,12 @@ class GeminiService:
         self.pro_model = genai.GenerativeModel(settings.gemini_model)
         self.flash_model = genai.GenerativeModel(settings.gemini_flash_model)
 
+    @async_retry(
+        max_attempts=3,
+        initial_delay=2.0,
+        max_delay=10.0,
+        exceptions=(Exception,)
+    )
     async def analyze_flagged_production(
         self,
         entry_data: Dict[str, Any],
@@ -32,6 +39,8 @@ class GeminiService:
         """
         Analyze flagged production data and provide detailed review.
 
+        Uses retry logic with exponential backoff and circuit breaker pattern.
+
         Args:
             entry_data: Production entry data
             acceptable_ranges: Dictionary of field -> (min, max) ranges
@@ -39,6 +48,9 @@ class GeminiService:
 
         Returns:
             HTML formatted analysis and recommendations
+
+        Raises:
+            CircuitBreakerError: If Gemini service circuit breaker is open
         """
         prompt = f"""You are an expert Oil & Gas production analyst. Analyze the following flagged production data entry.
 
@@ -68,14 +80,24 @@ Format your response in clean HTML (use <h3>, <p>, <ul>, <li>, <strong>, etc.) w
 """
 
         try:
-            response = await asyncio.to_thread(
-                self.pro_model.generate_content, prompt
-            )
-            return response.text
+            async with gemini_breaker:
+                response = await asyncio.to_thread(
+                    self.pro_model.generate_content, prompt
+                )
+                return response.text
+        except CircuitBreakerError as e:
+            logger.error(f"Gemini circuit breaker open: {e}")
+            return "<p>AI analysis service temporarily unavailable. Please try again later.</p>"
         except Exception as e:
             logger.error(f"Error analyzing flagged production: {e}")
-            return "<p>Unable to generate analysis at this time. Please try again later.</p>"
+            raise  # Let retry decorator handle it
 
+    @async_retry(
+        max_attempts=3,
+        initial_delay=2.0,
+        max_delay=10.0,
+        exceptions=(Exception,)
+    )
     async def analyze_reconciliation(
         self,
         reconciliation_data: Dict[str, Any],
@@ -84,12 +106,17 @@ Format your response in clean HTML (use <h3>, <p>, <ul>, <li>, <strong>, etc.) w
         """
         Generate comprehensive analysis of reconciliation results.
 
+        Uses retry logic with exponential backoff and circuit breaker pattern.
+
         Args:
             reconciliation_data: Reconciliation metadata
             result: Reconciliation calculation results
 
         Returns:
             HTML formatted comprehensive analysis
+
+        Raises:
+            CircuitBreakerError: If Gemini service circuit breaker is open
         """
         partner_allocations = result.get('partner_allocations', [])
 
@@ -151,13 +178,17 @@ Make this analysis **engaging and insightful** - use analogies, explain the scie
 """
 
         try:
-            response = await asyncio.to_thread(
-                self.pro_model.generate_content, prompt
-            )
-            return response.text
+            async with gemini_breaker:
+                response = await asyncio.to_thread(
+                    self.pro_model.generate_content, prompt
+                )
+                return response.text
+        except CircuitBreakerError as e:
+            logger.error(f"Gemini circuit breaker open: {e}")
+            return "<p>AI analysis service temporarily unavailable. Please try again later.</p>"
         except Exception as e:
             logger.error(f"Error analyzing reconciliation: {e}")
-            return "<p>Unable to generate analysis at this time. Please try again later.</p>"
+            raise  # Let retry decorator handle it
 
     async def chat_stream(
         self,
