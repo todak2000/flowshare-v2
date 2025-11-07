@@ -26,15 +26,9 @@ fake = Faker()
 
 def check_demo_access():
     """
-    Check if demo endpoints are accessible in current environment.
-    Demo endpoints are ONLY available in development mode.
+    Check if demo endpoints are accessible.
+    Demo endpoints require DEMO_PASSWORD to be configured for security.
     """
-    if settings.environment == "production":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Endpoint not found"
-        )
-
     if not settings.demo_password:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
