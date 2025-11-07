@@ -33,7 +33,7 @@ k6 run --stage 1m:10,3m:50,2m:100 k6_test.js
 pip install -r requirements.txt
 
 # Run with web UI
-locust -f locustfile.py --host=https://api.flowshare.com
+locust -f load_tests/locustfile.py --host=http://localhost:8000
 
 # Run headless
 locust -f locustfile.py --host=https://api.flowshare.com \

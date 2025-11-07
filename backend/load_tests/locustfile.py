@@ -8,12 +8,12 @@ Usage:
     locust -f locustfile.py --host=http://localhost:8000
 
     # Run headless (for CI/CD):
-    locust -f locustfile.py --host=https://api.flowshare.com \
+    locust -f load_tests/locustfile.py --host=https://flowshare-backend-api-226906955613.europe-west1.run.app \
            --users 100 --spawn-rate 10 --run-time 5m --headless \
            --csv=results/load_test --html=results/report.html
 
     # Run with specific scenario:
-    locust -f locustfile.py --host=https://api.flowshare.com \
+    locust -f locustfile.py --host=https://flowshare-backend-api-226906955613.europe-west1.run.app \
            CoordinatorUser --users 50 --spawn-rate 5 --run-time 3m
 
 Performance Targets:
@@ -22,18 +22,41 @@ Performance Targets:
     - Production list P95 latency: < 1500ms
     - Error rate: < 0.1%
     - Throughput: > 100 req/s
+
+Note:
+    This script automatically authenticates using auth_helper.py.
+    Ensure FIREBASE_API_KEY is set in your .env file or environment.
 """
 from locust import HttpUser, task, between, TaskSet, events
 import random
 import json
+import os
+import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 import logging
+
+# Add parent directory to path to import auth_helper
+sys.path.insert(0, str(Path(__file__).parent.parent / "tests"))
 
 logger = logging.getLogger(__name__)
 
-# Test configuration
-TENANT_ID = "test_tenant_001"
-TEST_USER_TOKEN = None  # Set via environment variable
+# Import auth helper and get token automatically
+try:
+    from auth_helper import get_test_token, get_test_tenant_id
+
+    logger.info("🔐 Authenticating with Firebase...")
+    TEST_USER_TOKEN = get_test_token()
+    TENANT_ID = get_test_tenant_id()
+    logger.info("✅ Authentication successful!")
+    logger.info(f"   Tenant ID: {TENANT_ID}")
+
+except Exception as e:
+    logger.error("❌ ERROR: Failed to authenticate using auth_helper")
+    logger.error(f"   {e}")
+    logger.error("   Make sure FIREBASE_API_KEY is set in your .env file")
+    raise ValueError(f"Authentication failed: {e}")
+
 PARTNER_IDS = ["partner_001", "partner_002", "partner_003"]
 
 

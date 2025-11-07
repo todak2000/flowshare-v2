@@ -7,27 +7,33 @@
  *   brew install k6  (macOS)
  *   sudo apt install k6  (Ubuntu)
  *
- * Usage:
+ * Usage (Recommended - uses auth_helper.py automatically):
  *   # Smoke test (verify functionality)
- *   k6 run --vus 1 --duration 30s k6_test.js
+ *   ./run_k6.sh --vus 1 --duration 30s
  *
  *   # Load test (normal traffic)
- *   k6 run --vus 50 --duration 5m k6_test.js
+ *   ./run_k6.sh --vus 50 --duration 5m
  *
  *   # Stress test (find breaking point)
- *   k6 run --vus 100 --duration 10m k6_test.js
+ *   ./run_k6.sh --vus 100 --duration 10m
  *
- *   # Spike test (sudden traffic surge)
- *   k6 run --stage 1m:10,1m:100,1m:10 k6_test.js
+ *   # Test against production
+ *   BASE_URL=https://flowshare-backend-api-226906955613.europe-west1.run.app ./run_k6.sh --vus 50 --duration 5m
  *
- *   # Cloud execution (k6 Cloud)
- *   k6 cloud k6_test.js
+ * Manual Usage (if you have tokens already):
+ *   export TEST_TOKEN="your_firebase_token"
+ *   export TENANT_ID="your_tenant_id"
+ *   k6 run --vus 50 --duration 5m k6_test.js
  *
  * Performance Thresholds:
  *   - HTTP errors < 1%
  *   - P95 latency < 2000ms
  *   - P99 latency < 5000ms
  *   - Average latency < 1000ms
+ *
+ * Note:
+ *   This script requires TEST_TOKEN and TENANT_ID environment variables.
+ *   Use the run_k6.sh wrapper script for automatic authentication.
  */
 
 import http from 'k6/http';
@@ -37,8 +43,31 @@ import { randomIntBetween, randomItem } from 'https://jslib.k6.io/k6-utils/1.2.0
 
 // Configuration
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const TEST_TOKEN = __ENV.TEST_TOKEN || 'test_token';
-const TENANT_ID = __ENV.TENANT_ID || 'test_tenant_001';
+const TEST_TOKEN = __ENV.TEST_TOKEN || '';
+const TENANT_ID = __ENV.TENANT_ID || '';
+
+// Validate required environment variables
+if (!TEST_TOKEN) {
+  console.error('❌ ERROR: TEST_TOKEN environment variable is required');
+  console.error('');
+  console.error('Recommended: Use the run_k6.sh wrapper script for automatic authentication:');
+  console.error('   ./run_k6.sh --vus 50 --duration 5m');
+  console.error('');
+  console.error('Or manually export the token:');
+  console.error('   export TEST_TOKEN="your_firebase_id_token"');
+  throw new Error('TEST_TOKEN is required');
+}
+
+if (!TENANT_ID) {
+  console.error('❌ ERROR: TENANT_ID environment variable is required');
+  console.error('');
+  console.error('Recommended: Use the run_k6.sh wrapper script:');
+  console.error('   ./run_k6.sh --vus 50 --duration 5m');
+  console.error('');
+  console.error('Or manually export the tenant ID:');
+  console.error('   export TENANT_ID="your_tenant_id"');
+  throw new Error('TENANT_ID is required');
+}
 
 // Custom metrics
 const errorRate = new Rate('errors');

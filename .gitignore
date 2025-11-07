@@ -7,6 +7,10 @@ codematic-gemini
 devpost-gemini
 codematic
 devpost
+firestore.indexes.json
+firebase.json
+firestore.rules
+docs
 
 # Sensitive files
 

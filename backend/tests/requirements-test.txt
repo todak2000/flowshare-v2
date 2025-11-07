@@ -1,0 +1,39 @@
+# Testing dependencies for FlowShare V2
+
+# Core testing
+pytest==8.4.2
+pytest-asyncio==0.24.0
+pytest-cov==4.1.0
+pytest-timeout==2.2.0
+pytest-xdist==3.5.0  # Parallel test execution
+
+# Mocking and fixtures
+pytest-mock==3.12.0
+faker==22.6.0
+factory-boy==3.3.0
+
+# HTTP testing
+aiohttp==3.9.3
+httpx[http2]==0.28.1
+
+# Google Cloud testing
+google-cloud-firestore==2.21.0
+google-cloud-pubsub==2.19.0
+google-cloud-storage==3.1.1
+
+# Chaos engineering
+psutil==5.9.8  # System monitoring
+netifaces==0.11.0  # Network interfaces
+
+# Load testing (already in load_tests/requirements.txt)
+# locust==2.20.0
+# k6 is installed separately
+
+# Code quality
+black==24.1.1
+flake8==7.0.0
+mypy==1.8.0
+isort==5.13.2
+
+# Coverage reporting
+coverage[toml]==7.4.1

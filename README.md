@@ -29,7 +29,7 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 
 **API Documentation:** [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
 
-**Demo Video:** [Watch on Youtube](https://youtu.be/b0BSD6JAadU)
+**Demo Video:** [Watch on Youtube](https://youtu.be/yjV5SEOnyAU)
 
 **Blog Post:** [Read on Medium](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
 
@@ -614,7 +614,7 @@ curl -X POST "https://flowshare-backend-api-226906955613.europe-west1.run.app/ap
 
 ### Demo Video
 
-Watch full walkthrough: [YouTube Demo (3 minutes)](https://youtu.be/b0BSD6JAadU)
+Watch full walkthrough: [YouTube Demo (6 minutes)](https://youtu.be/yjV5SEOnyAU)
 
 ### Blog Post
 
