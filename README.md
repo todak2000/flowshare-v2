@@ -548,8 +548,7 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 
 ## 🧑‍💻 Try It Out - Demo Guide
 
-**Before you start**: Watch the [Explainer Video](https://youtu.be/bhytH-z8k2Y) (4 min) to understand how FlowShare works, then follow this guide.
-
+**Before you start**: Watch the [Explainer Video](https://youtu.be/bhytH-z8k2Y) (5 min) to understand how FlowShare works, then follow this guide. For a complete walkthrough of all features: [FlowShare Demo Video](https://youtu.be/yjV5SEOnyAU) (6 min)
 ---
 
 ### 🎬 Option 1: Demo Admin Access (Recommended - Fastest Way)
@@ -558,15 +557,15 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 
 #### Step 1: Access the Demo
 1. Open your browser and navigate to: [https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin)
-2. Enter the password: `FlowShare@Demo2025`
-3. Click "Access Demo"
+2. Decide which user you want to login (Coordinator, Partner or Field Operator)
+3. Copy the appriopriate credentials and login via https://flowshare-frontend-226906955613.europe-west1.run.app/auth/login
 
 #### Step 2: Explore the Dashboard
 - **What you'll see**: Production overview, trend charts, pending approvals
-- **Pre-loaded data**: 4 partners (Shell, Chevron, NNPC, TotalEnergies) with historical production entries
+- **Pre-loaded data**: 4 partners with historical production entries ONLY if you login as Coordinator
 - **Try this**: Navigate to different sections using the sidebar menu
 
-#### Step 3: Submit a Test Production Entry
+#### Step 3: Submit a Test Production Entry ONLY as a Field Operator
 1. Click **"Production Entries"** in the sidebar
 2. Click **"Submit New Entry"** button (top right)
 3. Fill in the form with sample data:
@@ -578,7 +577,7 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 4. Click **"Submit"**
 5. **Watch AI in action**: You'll see a success message, and the Auditor Agent will validate your entry in the background (check back in 30-60 seconds)
 
-#### Step 4: Run a Reconciliation
+#### Step 4: Run a Reconciliation ONLY as a Cordinator
 1. Click **"Reconciliations"** in the sidebar
 2. Click **"Create Reconciliation"** button
 3. Select the **current month** and **year**
@@ -605,8 +604,6 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
    - "Show me production trends for Shell"
 3. Get instant AI-powered answers about your production data
 
-#### Step 7: Watch the Demo Video
-For a complete walkthrough of all features: [FlowShare Demo Video](https://youtu.be/yjV5SEOnyAU) (6 min)
 
 ---
 
