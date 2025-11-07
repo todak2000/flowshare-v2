@@ -27,7 +27,7 @@ fake = Faker()
 def check_demo_access():
     """
     Check if demo endpoints are accessible.
-    Demo endpoints require DEMO_PASSWORD to be configured for security.
+    Demo endpoints require DEMO_PASSWORD to be configured for security and both dev and prod.
     """
     if not settings.demo_password:
         raise HTTPException(
