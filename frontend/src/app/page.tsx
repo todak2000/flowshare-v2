@@ -19,6 +19,8 @@ import { TrustSecuritySection } from "@/components/landing-page/trust-security-s
 import { ScadaIntegrationSection } from "@/components/landing-page/scada-integration-section";
 import { FinalCtaSection } from "@/components/landing-page/final-cta-section";
 import { FaqSection } from "@/components/landing-page/faq-section";
+import { ExplainerVideoSection } from "@/components/landing-page/explainer-video-section";
+import { DemoVideoSection } from "@/components/landing-page/demo-video-section";
 
 export default function LandingPage() {
   const { user } = useAuthStore();
@@ -41,10 +43,12 @@ export default function LandingPage() {
       <LandingNavigation isAuthenticated={isAuthenticated} />
       <HeroSection />
       <StatsSection />
+      <ExplainerVideoSection />
       <AIAgentsSection />
       <FlowshareGptSection />
       <FeaturesSection />
       <HowItWorksSection />
+      <DemoVideoSection />
       <TestimonialsSection />
       <UseCasesSection />
       <RoiCalculatorSection />

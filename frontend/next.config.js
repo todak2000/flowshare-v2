@@ -104,7 +104,7 @@ const nextConfig = {
               "img-src 'self' data: https: blob:",
               "font-src 'self' data: https://fonts.gstatic.com",
               `connect-src ${connectSrc}`,
-              "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
+              "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.youtube.com https://www.youtube-nocookie.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
