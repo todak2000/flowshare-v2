@@ -89,6 +89,7 @@ async def list_partners(
 
             tenant_name = tenant_docs.get(primary_tenant_id, {}).get("name", "Unknown")
             partner_data["parent_jv"] = tenant_name
+            partner_data.pop('id', None)
             partners.append(User(id=doc.id, **partner_data))
 
     return partners

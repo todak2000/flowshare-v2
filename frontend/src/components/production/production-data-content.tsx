@@ -297,6 +297,7 @@ export const ProductionDataContent: React.FC<ProductionDataContentProps> = ({
     <div className="flex h-screen flex-col bg-background">
       <ProductionPageHeader
         userRole={userRole}
+        environment={environment}
         onRefresh={handleRefresh}
         loading={loading || statsLoading}
         onToggleCharts={() => setShowCharts(!showCharts)}

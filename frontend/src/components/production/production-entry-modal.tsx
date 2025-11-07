@@ -28,6 +28,7 @@ export function ProductionEntryModal({
   const { getTenantId, getUserRole, user } = useAuthStore();
   const userRole = getUserRole() || "";
   const [loading, setLoading] = React.useState(false);
+  const isSubmittingRef = React.useRef(false); // Prevent double submission
   const [formData, setFormData] = React.useState<FormData>({
     measurement_date: new Date().toISOString().split("T")[0],
     gross_volume: "",
@@ -76,6 +77,12 @@ export function ProductionEntryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent double submission
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     if (!validateForm()) return;
 
     const tenantId = getTenantId();
@@ -86,6 +93,7 @@ export function ProductionEntryModal({
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       const payload: ProductionEntryCreate = {
@@ -118,6 +126,7 @@ export function ProductionEntryModal({
       setErrors({ submit: extractErrorMessage(error) });
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 

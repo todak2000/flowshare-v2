@@ -369,6 +369,7 @@ async def get_current_user(
 
     user_doc_ref = users[0].reference
     user_data = users[0].to_dict()
+    user_data.pop('id', None)
 
     # Update last login timestamp
     now = datetime.now(timezone.utc)
@@ -393,7 +394,6 @@ async def get_current_user(
             user_data["subscription_plan"] = "starter"
     else:
         user_data["subscription_plan"] = "starter"
-
     return User(id=users[0].id, **user_data)
 
 

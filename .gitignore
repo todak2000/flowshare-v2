@@ -6,6 +6,7 @@ backend/firebase-credentials.json
 codematic-gemini
 devpost-gemini
 codematic
+*.pyc
 devpost
 firestore.indexes.json
 firebase.json

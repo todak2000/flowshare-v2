@@ -20,6 +20,7 @@ class GeminiService:
 
         # Strip any trailing whitespace/newlines from API key
         api_key = settings.gemini_api_key.strip()
+    
         genai.configure(api_key=api_key)
         self.pro_model = genai.GenerativeModel(settings.gemini_model)
         self.flash_model = genai.GenerativeModel(settings.gemini_flash_model)
@@ -289,14 +290,36 @@ Entry {i} - {date_str}:
             context_prompt += f"\n**Reconciliation Reports ({len(reconciliations)} reports):**\n"
 
             for i, rec in enumerate(reconciliations[:5], 1):  # Show first 5 in detail
+                try:
+                    terminal_vol = float(rec.get('terminal_volume'))
+                except (ValueError, TypeError):
+                    terminal_vol = 0.0
+
+                try:
+                    total_allocated_vol = float(rec.get('total_allocated_volume'))
+                except (ValueError, TypeError):
+                    total_allocated_vol = 0.0
+
+                try:
+                    shrinkage_vol = float(rec.get('shrinkage_volume'))
+                except (ValueError, TypeError):
+                    shrinkage_vol = 0.0
+                
+                try:
+                    shrinkage_pct = float(rec.get('shrinkage_percent'))
+                except (ValueError, TypeError):
+                    shrinkage_pct = 0.0
+                # --- End of Fix ---
+
+                # Now, use the clean variables in your f-string
                 context_prompt += f"""
-Reconciliation {i} ({rec.get('status', 'unknown')}):
-  - Period: {rec.get('period_start', 'N/A')} to {rec.get('period_end', 'N/A')}
-  - Terminal Volume: {rec.get('terminal_volume', 0):,.0f} barrels
-  - Total Allocated: {rec.get('total_allocated_volume', 0):,.0f} barrels
-  - Shrinkage: {rec.get('shrinkage_volume', 0):,.0f} barrels ({rec.get('shrinkage_percent', 0):.2f}%)
-  - Model Used: {rec.get('allocation_model', 'unknown')}
-"""
+                    Reconciliation {i} ({rec.get('status', 'unknown')}):
+                    - Period: {rec.get('period_start', 'N/A')} to {rec.get('period_end', 'N/A')}
+                    - Terminal Volume: {terminal_vol:,.0f} barrels
+                    - Total Allocated: {total_allocated_vol:,.0f} barrels
+                    - Shrinkage: {shrinkage_vol:,.0f} barrels ({shrinkage_pct:.2f}%)
+                    - Model Used: {rec.get('allocation_model', 'unknown')}
+                """
                 # Partner allocations if available
                 if rec.get('partner_allocations'):
                     context_prompt += "  - Partner Allocations:\n"
@@ -371,15 +394,45 @@ You specialize in:
         full_prompt = f"{context_prompt}\n\n**User Question:** {message}"
 
         try:
-            response = await asyncio.to_thread(
-                chat_session.send_message,
-                full_prompt,
-                stream=True
-            )
+            # Create a queue to pass chunks from thread to async generator
+            import queue
+            import threading
 
-            for chunk in response:
-                if chunk.text:
-                    yield chunk.text
+            chunk_queue = queue.Queue()
+            error_container = []
+
+            def stream_in_thread():
+                """Run the blocking streaming call in a separate thread."""
+                try:
+                    response = chat_session.send_message(full_prompt, stream=True)
+                    for chunk in response:
+                        if chunk.text:
+                            chunk_queue.put(chunk.text)
+                    chunk_queue.put(None)  # Signal completion
+                except Exception as e:
+                    error_container.append(e)
+                    chunk_queue.put(None)
+
+            # Start streaming in background thread
+            thread = threading.Thread(target=stream_in_thread)
+            thread.start()
+
+            # Yield chunks as they arrive
+            while True:
+                # Use asyncio.to_thread to avoid blocking the event loop while waiting
+                chunk_text = await asyncio.to_thread(chunk_queue.get)
+
+                if chunk_text is None:
+                    break
+
+                yield chunk_text
+
+            # Wait for thread to complete
+            await asyncio.to_thread(thread.join)
+
+            # Check for errors
+            if error_container:
+                raise error_container[0]
 
         except Exception as e:
             logger.error(f"Error in chat stream: {e}")

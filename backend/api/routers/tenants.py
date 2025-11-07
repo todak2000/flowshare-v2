@@ -40,8 +40,9 @@ async def get_my_tenant(
 
     if not tenant_doc.exists:
         raise HTTPException(status_code=404, detail="Tenant not found")
-
-    return Tenant(id=tenant_doc.id, **tenant_doc.to_dict())
+    tenant = tenant_doc.to_dict()
+    tenant.pop('id', None)
+    return Tenant(id=tenant_doc.id, **tenant)
 
 
 @router.patch("/me", response_model=Tenant)
@@ -144,7 +145,9 @@ async def list_tenants(
     for tenant_id in tenant_ids:
         tenant_doc = await tenants_ref.document(tenant_id).get()
         if tenant_doc.exists:
-            tenants.append(Tenant(id=tenant_doc.id, **tenant_doc.to_dict()))
+            tenant = tenant_doc.to_dict()
+            tenant.pop('id', None)
+            tenants.append(Tenant(id=tenant_doc.id, **tenant))
 
     return tenants
 
@@ -160,8 +163,9 @@ async def get_tenant(
 
     if not tenant_doc.exists:
         raise HTTPException(status_code=404, detail="Tenant not found")
-
-    return Tenant(id=tenant_doc.id, **tenant_doc.to_dict())
+    tenant = tenant_doc.to_dict()
+    tenant.pop('id', None)
+    return Tenant(id=tenant_doc.id, **tenant)
 
 
 @router.patch("/{tenant_id}", response_model=Tenant)

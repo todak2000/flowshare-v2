@@ -213,6 +213,7 @@ async def list_production_entries(
     all_entries = []
     for doc in entries_query:
         entry_data = doc.to_dict()
+        entry_data.pop('id', None)
         entry = ProductionEntry(id=doc.id, **entry_data)
 
         # Temperature filter (must be done in memory as Firestore doesn't support multiple range queries)
@@ -405,7 +406,8 @@ async def get_production_stats(
     partner_counts: Dict[str, int] = defaultdict(int)
 
     for doc in entries_query:
-        entry_data = doc.to_dict()
+        entry_data = doc.to_dict()       
+        entry_data.pop('id', None)
         entry = ProductionEntry(id=doc.id, **entry_data)
         # Calculate net volume (gross - BSW)
         net_volume = entry.gross_volume * (1 - entry.bsw_percent / 100) * entry.meter_factor

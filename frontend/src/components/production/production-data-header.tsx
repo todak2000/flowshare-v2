@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 
 interface ProductionPageHeaderProps {
   userRole: string;
+  environment: 'test' | 'production';
   onRefresh: () => void;
   loading: boolean;
   onToggleCharts: () => void;
@@ -21,7 +22,8 @@ interface ProductionPageHeaderProps {
 
 export const ProductionPageHeader: React.FC<ProductionPageHeaderProps> = ({
   userRole,
-  onRefresh,
+  environment,
+  onRefresh, 
   loading,
   onToggleCharts,
   showCharts,
@@ -71,7 +73,7 @@ export const ProductionPageHeader: React.FC<ProductionPageHeaderProps> = ({
               Export
             </Button>
           )}
-          {userRole === "field_operator" && !hasTodayEntry && (
+          {userRole === "field_operator" && !hasTodayEntry && environment ==='production' && (
             <Button size="sm" onClick={onNewEntry}>
               <Plus className="mr-2 h-4 w-4" />
               New Entry
