@@ -29,10 +29,6 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 
 **API Documentation:** [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
 
-**Demo Video:** [Watch on Youtube](https://youtu.be/yjV5SEOnyAU)
-
-**Blog Post:** [Read on Medium](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
-
 ### Key Benefits
 
 ✅ **95% faster reconciliation** (weeks → minutes)
@@ -40,6 +36,23 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 ✅ **AI anomaly detection** prevents costly disputes
 ✅ **Complete audit trail** with Excel exports
 ✅ **Multi-role access** for coordinators, partners, and operators
+
+---
+
+## 📺 Videos
+
+### Explainer Video (4 minutes)
+Learn how FlowShare V2 solves petroleum allocation challenges with AI-powered automation.
+
+**Watch:** [FlowShare V2 Explainer](https://youtu.be/bhytH-z8k2Y)
+
+### Demo Video (6 minutes)
+Complete walkthrough of the application - from submitting production data to running reconciliations.
+
+**Watch:** [FlowShare V2 Demo](https://youtu.be/yjV5SEOnyAU)
+
+### Technical Deep-Dive
+**Blog Post:** [Building FlowShare: How I Built a Multi-Agent System on Google Cloud Run](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
 
 ---
 
@@ -535,53 +548,132 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 
 ## 🧑‍💻 Try It Out - Demo Guide
 
-### Quick Start (No Setup Required)
+**Before you start**: Watch the [Explainer Video](https://youtu.be/bhytH-z8k2Y) (4 min) to understand how FlowShare works, then follow this guide.
 
-**Live Application**: [https://flowshare-frontend-226906955613.europe-west1.run.app/](https://flowshare-frontend-226906955613.europe-west1.run.app/)
+---
 
-### Option 1: Demo Admin Access (Pre-loaded Data)
+### 🎬 Option 1: Demo Admin Access (Recommended - Fastest Way)
 
-**URL**: [https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin)
+**Best for**: First-time users who want to see the full application immediately with pre-loaded data.
 
-**Password**: `FlowShare@Demo2025`
+#### Step 1: Access the Demo
+1. Open your browser and navigate to: [https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin](https://flowshare-frontend-226906955613.europe-west1.run.app/demo-admin)
+2. Enter the password: `FlowShare@Demo2025`
+3. Click "Access Demo"
 
-**What's Included**:
-- Pre-loaded joint venture with 4 partners (Shell, Chevron, NNPC, TotalEnergies)
-- Sample production entries (approved, flagged, pending)
-- Completed reconciliations with AI insights
-- Full access to all features
+#### Step 2: Explore the Dashboard
+- **What you'll see**: Production overview, trend charts, pending approvals
+- **Pre-loaded data**: 4 partners (Shell, Chevron, NNPC, TotalEnergies) with historical production entries
+- **Try this**: Navigate to different sections using the sidebar menu
 
-**Test Scenarios**:
-1. **View Dashboard** - See production trends and analytics
-2. **Submit New Entry** - Add production data, watch AI validation
-3. **Trigger Reconciliation** - Run allocation for current period
-4. **Review AI Insights** - Check Gemini-generated analysis
-5. **Export Report** - Download Excel with detailed calculations
-6. **Chat with FlowshareGPT** - Ask questions about production data
+#### Step 3: Submit a Test Production Entry
+1. Click **"Production Entries"** in the sidebar
+2. Click **"Submit New Entry"** button (top right)
+3. Fill in the form with sample data:
+   - **Measurement Date**: Select today's date
+   - **Gross Volume**: Enter `25000` (barrels)
+   - **BS&W %**: Enter `5.2` (water content)
+   - **Temperature**: Enter `85` (Fahrenheit)
+   - **API Gravity**: Enter `35.5` (oil density)
+4. Click **"Submit"**
+5. **Watch AI in action**: You'll see a success message, and the Auditor Agent will validate your entry in the background (check back in 30-60 seconds)
 
-### Option 2: Create Your Own Account
+#### Step 4: Run a Reconciliation
+1. Click **"Reconciliations"** in the sidebar
+2. Click **"Create Reconciliation"** button
+3. Select the **current month** and **year**
+4. Click **"Generate Reconciliation"**
+5. **What happens**: The Accountant Agent will:
+   - Apply API MPMS 11.1 allocation formulas
+   - Calculate each partner's share
+   - Generate AI insights using Gemini
+   - This takes 1-2 minutes
 
-1. **Sign Up**: [Register here](https://flowshare-frontend-226906955613.europe-west1.run.app/auth/signup)
-2. **Create Organization**: Set up your joint venture
-3. **Invite Partners**: Add team members via email
-4. **Submit Data**: Enter production measurements
-5. **Run Reconciliation**: Allocate volumes across partners
+#### Step 5: Review Results & Download Report
+1. Once reconciliation completes, click **"View Details"**
+2. Review:
+   - **Allocation breakdown** per partner
+   - **AI insights** (Gemini analysis)
+   - **Step-by-step calculations**
+3. Click **"Download Excel Report"** to export detailed calculations
 
-### API Documentation & Testing
+#### Step 6: Try FlowshareGPT (AI Chat)
+1. Click **"FlowshareGPT"** in the sidebar
+2. Ask questions like:
+   - "What was our total production last month?"
+   - "Which partner had the highest allocation?"
+   - "Show me production trends for Shell"
+3. Get instant AI-powered answers about your production data
 
-**Swagger UI**: [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
+#### Step 7: Watch the Demo Video
+For a complete walkthrough of all features: [FlowShare V2 Demo Video](https://youtu.be/yjV5SEOnyAU) (6 min)
 
-**Authentication**:
-- Username: `admin`
-- Password: (Contact for API access or use demo account token)
+---
 
-**Example API Request**:
+### 🆕 Option 2: Create Your Own Account
+
+**Best for**: Users who want to set up their own joint venture from scratch.
+
+#### Step 1: Sign Up
+1. Navigate to: [https://flowshare-frontend-226906955613.europe-west1.run.app/auth/signup](https://flowshare-frontend-226906955613.europe-west1.run.app/auth/signup)
+2. Fill in your details:
+   - **Email**: Your email address
+   - **Password**: Minimum 8 characters
+   - **Organization Name**: Your company name
+3. Click **"Create Account"**
+4. Check your email for verification link (if required)
+
+#### Step 2: Set Up Your Joint Venture
+1. After login, you'll be prompted to complete your organization profile
+2. Enter:
+   - **Joint Venture Name**: e.g., "ABC Oil Field"
+   - **Field Location**: e.g., "Niger Delta"
+   - **Subscription Plan**: Select "Starter" (Free)
+3. Click **"Save"**
+
+#### Step 3: Invite Partners
+1. Go to **"Team Management"** in the sidebar
+2. Click **"Invite Partner"**
+3. Enter:
+   - **Partner Name**: e.g., "Shell Nigeria"
+   - **Email**: Partner's email address
+   - **Equity Share**: e.g., `25` (percent)
+4. Repeat for all partners (up to 5 on Starter plan)
+5. Partners will receive email invitations
+
+#### Step 4: Submit Your First Production Entry
+1. Click **"Production Entries"** → **"Submit New Entry"**
+2. Fill in actual production data from your field
+3. Submit and wait for AI validation
+
+#### Step 5: Run Your First Reconciliation
+1. After accumulating entries for a period, go to **"Reconciliations"**
+2. Click **"Create Reconciliation"**
+3. Select the period and generate
+
+---
+
+### 🔧 Option 3: API Testing (For Developers)
+
+**Best for**: Developers integrating FlowShare with SCADA systems or building custom applications.
+
+#### Step 1: Access API Documentation
+1. Navigate to: [https://flowshare-backend-api-226906955613.europe-west1.run.app/docs](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
+2. This opens the **Swagger UI** with interactive API documentation
+
+#### Step 2: Authenticate
+**Option A: Use Demo Account Token**
+1. Access the demo admin panel first (Option 1 above)
+2. Go to **"Settings"** → **"API Keys"**
+3. Copy your JWT token
+
+**Option B: Contact for API Access**
+- Email: support@flowshare.com
+- We'll provide test credentials
+
+#### Step 3: Test Production Entry Endpoint
 ```bash
-# Get production entries (requires JWT token)
-curl -X GET "https://flowshare-backend-api-226906955613.europe-west1.run.app/api/production-entries" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-
-# SCADA API key authentication
+# Example: Submit production data via SCADA API
 curl -X POST "https://flowshare-backend-api-226906955613.europe-west1.run.app/api/scada/production" \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -594,31 +686,63 @@ curl -X POST "https://flowshare-backend-api-226906955613.europe-west1.run.app/ap
   }'
 ```
 
-### Recommended Test Flow
+#### Step 4: Explore Other Endpoints
+- **GET /api/production-entries**: List all entries
+- **GET /api/reconciliations**: List reconciliations
+- **POST /api/reconciliations/trigger**: Start reconciliation
+- **GET /api/analytics/production-trends**: Get trend data
 
-**For Developers**:
-1. Explore API docs (Swagger UI)
-2. Test production entry submission
-3. Watch Auditor Agent validate data (check AI analysis)
-4. Trigger reconciliation
-5. Review Accountant Agent results (Gemini insights)
-6. Check email notifications (Communicator Agent)
+All endpoints are documented in Swagger UI with request/response examples.
 
-**For Business Users**:
-1. Use Demo Admin access
-2. Navigate dashboard (production trends)
-3. Submit test production entry
-4. Run reconciliation for current month
-5. Download Excel export
-6. Chat with FlowshareGPT
+---
 
-### Demo Video
+### 📊 Complete Test Flow (All Features)
 
-Watch full walkthrough: [YouTube Demo (6 minutes)](https://youtu.be/yjV5SEOnyAU)
+**For the full experience, follow this 15-minute flow**:
 
-### Blog Post
+1. **[0-2 min]** Watch [Explainer Video](https://youtu.be/bhytH-z8k2Y)
+2. **[2-3 min]** Access Demo Admin panel
+3. **[3-5 min]** Explore Dashboard and Production Entries
+4. **[5-7 min]** Submit new production entry, watch AI validation
+5. **[7-10 min]** Trigger reconciliation, wait for completion
+6. **[10-12 min]** Review AI insights and download Excel report
+7. **[12-14 min]** Chat with FlowshareGPT
+8. **[14-15 min]** Explore Team Management, Analytics, Settings
+9. **[Optional]** Watch [Demo Video](https://youtu.be/yjV5SEOnyAU) for detailed walkthrough
 
-Technical deep-dive: [Building FlowShare on Google Cloud Run](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
+---
+
+### 🎯 What You'll Learn from the Demo
+
+By completing this guide, you'll understand:
+
+✅ How production data flows through the system
+✅ How AI agents validate and process data asynchronously
+✅ How API MPMS 11.1 allocation formulas are applied
+✅ How Gemini AI generates insights and detects anomalies
+✅ How multi-tenant SaaS architecture isolates partner data
+✅ How event-driven architecture enables real-time processing
+✅ How to integrate FlowShare with SCADA systems via API
+
+---
+
+### 🆘 Need Help?
+
+**Common Questions**:
+- **"I can't access the demo admin"**: Make sure you're using the exact password: `FlowShare@Demo2025` (case-sensitive)
+- **"Reconciliation is taking too long"**: Normal processing time is 1-2 minutes. If it exceeds 5 minutes, refresh the page.
+- **"AI validation failed"**: Check that your production data is within realistic ranges (e.g., BS&W < 100%)
+
+**Resources**:
+- **Demo Video**: [YouTube](https://youtu.be/yjV5SEOnyAU)
+- **Explainer Video**: [YouTube](https://youtu.be/bhytH-z8k2Y)
+- **Blog Post**: [Medium](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
+- **API Docs**: [Swagger UI](https://flowshare-backend-api-226906955613.europe-west1.run.app/docs)
+
+**Support**:
+- **Documentation**: [Backend README](./backend/README.md) | [Frontend README](./frontend/README.md)
+- **Issues**: [GitHub Issues](https://github.com/todak2000/flowshare-v2/issues)
+- **Email**: support@flowshare.com
 
 ---
 
