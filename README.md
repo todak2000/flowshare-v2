@@ -495,7 +495,7 @@ FlowShare V2 leverages **7 GCP services** strategically integrated for a product
 | **Analytics** | ✅ | ✅ | ✅ |
 | **API Access** | ❌ | ✅ | ✅ |
 | **Support** | Email | Priority | Dedicated |
-| **Price** | Free | $149/mo | $399/mo |
+| **Price** | Free | $449/mo | $999/mo |
 
 ---
 
