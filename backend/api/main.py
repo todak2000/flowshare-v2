@@ -1,4 +1,4 @@
-"""Main FastAPI application for FlowShare V2 API Service."""
+"""Main FastAPI application for FlowShare API Service."""
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
-    logger.info("Starting FlowShare V2 API Service...")
+    logger.info("Starting FlowShare API Service...")
     try:
         initialize_firestore()
         logger.info("Firestore initialized successfully")
@@ -57,13 +57,13 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    logger.info("Shutting down FlowShare V2 API Service...")
+    logger.info("Shutting down FlowShare API Service...")
 
 
 # Create FastAPI app with lifespan
 # Disable default docs in production, will create custom protected endpoints
 app = FastAPI(
-    title="FlowShare V2 API",
+    title="FlowShare API",
     description="AI-Powered Hydrocarbon Allocation Platform API",
     version="2.0.0",
     docs_url=None,  # Disabled - using custom protected endpoint

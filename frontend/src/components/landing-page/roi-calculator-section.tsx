@@ -47,7 +47,7 @@ export function RoiCalculatorSection() {
               Calculate Your Savings
             </h2>
             <p className="text-xl text-muted-foreground">
-              See how much FlowShare V2 saves your operation annually
+              See how much FlowShare saves your operation annually
             </p>
           </div>
 

@@ -1,4 +1,4 @@
-# Testing dependencies for FlowShare V2
+# Testing dependencies for FlowShare
 
 # Core testing
 pytest==8.4.2

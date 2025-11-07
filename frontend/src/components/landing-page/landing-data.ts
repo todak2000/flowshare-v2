@@ -467,7 +467,7 @@ export const faqs: FaqItem[] = [
   {
     question: "What is API MPMS 11.1 and why does it matter?",
     answer:
-      "API Manual of Petroleum Measurement Standards Chapter 11.1 is the petroleum industry standard for hydrocarbon allocation calculations. It defines how to correct volumes for temperature, pressure, API gravity, and water content. FlowShare V2 implements these formulas exactly, ensuring regulatory compliance and industry acceptance.",
+      "API Manual of Petroleum Measurement Standards Chapter 11.1 is the petroleum industry standard for hydrocarbon allocation calculations. It defines how to correct volumes for temperature, pressure, API gravity, and water content. FlowShare implements these formulas exactly, ensuring regulatory compliance and industry acceptance.",
   },
   {
     question: "How does the AI validation work?",
@@ -477,7 +477,7 @@ export const faqs: FaqItem[] = [
   {
     question: "Can I integrate FlowShare with my existing SCADA system?",
     answer:
-      "Yes! FlowShare V2 provides a secure REST API for automated data ingestion. You'll get API keys with test and production environments, comprehensive documentation, and code examples in Python, JavaScript, and cURL. Setup typically takes less than 1 hour.",
+      "Yes! FlowShare provides a secure REST API for automated data ingestion. You'll get API keys with test and production environments, comprehensive documentation, and code examples in Python, JavaScript, and cURL. Setup typically takes less than 1 hour.",
   },
   {
     question: "What happens to my data? Is it secure?",
@@ -492,12 +492,12 @@ export const faqs: FaqItem[] = [
   {
     question: "What if our allocation model isn't standard API MPMS 11.1?",
     answer:
-      "FlowShare V2 supports custom allocation models. Professional and Enterprise plans allow you to configure calculation parameters, add custom correction factors, and implement specialized formulas. Our team can help adapt the engine to your specific requirements.",
+      "FlowShare supports custom allocation models. Professional and Enterprise plans allow you to configure calculation parameters, add custom correction factors, and implement specialized formulas. Our team can help adapt the engine to your specific requirements.",
   },
   {
     question: "Can auditors verify the calculations?",
     answer:
-      "Absolutely. FlowShare V2 exports Excel workbooks with three sheets: Summary, Partner Allocations, and Step-by-Step Calculations. Every formula is shown explicitly with intermediate values, making it easy for auditors to verify accuracy and maintain compliance.",
+      "Absolutely. FlowShare exports Excel workbooks with three sheets: Summary, Partner Allocations, and Step-by-Step Calculations. Every formula is shown explicitly with intermediate values, making it easy for auditors to verify accuracy and maintain compliance.",
   },
   {
     question: "What's included in the 14-day free trial?",
@@ -539,7 +539,7 @@ export const footerLinks: FooterLinkGroup[] = [
 export const seoSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "FlowShare V2",
+  name: "FlowShare",
   applicationCategory: "BusinessApplication",
   description:
     "AI-powered hydrocarbon allocation platform for Oil & Gas joint ventures. Automate reconciliation with 95% time savings. API MPMS 11.1 compliant.",
@@ -569,6 +569,6 @@ export const seoSchema = {
   provider: {
     "@type": "Organization",
     name: "FlowShare",
-    url: "https://flowshare.com",
+    url: "https://flowshare-frontend-226906955613.europe-west1.run.app",
   },
 };

@@ -37,7 +37,7 @@ export function LandingFooter() {
         </div>
         <div className="border-t border-border pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            &copy; 2025 FlowShare V2. All rights reserved.
+            &copy; 2025 FlowShare. All rights reserved.
           </p>
         </div>
       </div>

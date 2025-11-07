@@ -1,4 +1,4 @@
-"""Shared Pydantic models for FlowShare V2."""
+"""Shared Pydantic models for FlowShare."""
 from .user import User, UserRole, UserCreate, UserUpdate
 from .tenant import Tenant, TenantCreate, TenantUpdate, TenantSettings, AllocationModel
 from .invitation import Invitation, InvitationCreate, InvitationStatus

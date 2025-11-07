@@ -1,4 +1,4 @@
-"""Security middleware for FlowShare V2 API."""
+"""Security middleware for FlowShare API."""
 import secrets
 from typing import Callable
 from fastapi import Request, HTTPException, status

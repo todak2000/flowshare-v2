@@ -61,7 +61,7 @@ async def send_email(
             payload = {
                 "from": {
                     "address": settings.zepto_from_email,
-                    "name": "FlowShare V2"
+                    "name": "FlowShare"
                 },
                 "to": [
                     {

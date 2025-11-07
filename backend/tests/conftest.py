@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for FlowShare V2 tests.
+Pytest configuration and shared fixtures for FlowShare tests.
 
 This module provides:
 - Firebase Admin SDK mocks

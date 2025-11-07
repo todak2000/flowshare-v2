@@ -27,7 +27,7 @@ def _wrap_in_layout(body_content: str) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="x-apple-disable-message-reformatting">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>FlowShare V2</title>
+    <title>FlowShare</title>
     <!--[if mso]>
     <style type="text/css">
         body, table, td {{font-family: Arial, Helvetica, sans-serif !important;}}
@@ -50,7 +50,7 @@ def _wrap_in_layout(body_content: str) -> str:
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td>
-                                        <img src="{logo_url}" alt="FlowShare V2" width="180" style="display: block; max-width: 180px; height: auto; border: 0; outline: none; text-decoration: none;">
+                                        <img src="{logo_url}" alt="FlowShare" width="180" style="display: block; max-width: 180px; height: auto; border: 0; outline: none; text-decoration: none;">
                                     </td>
                                 </tr>
                             </table>
@@ -81,9 +81,9 @@ def _wrap_in_layout(body_content: str) -> str:
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td style="text-align: center; font-size: 13px; color: #666666; line-height: 1.6;">
-                                        <p style="margin: 0 0 10px 0;">This is an automated notification from the FlowShare V2 system.</p>
+                                        <p style="margin: 0 0 10px 0;">This is an automated notification from the FlowShare system.</p>
                                         <p style="margin: 0 0 20px 0; font-size: 12px; color: #999999;">
-                                            &copy; 2025 FlowShare V2. All rights reserved.
+                                            &copy; 2025 FlowShare. All rights reserved.
                                         </p>
                                     </td>
                                 </tr>
@@ -469,7 +469,7 @@ def render_invitation_email(
         <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: bold; color: #1f2937; line-height: 1.3;">Hi {invitee_name},</h1>
 
         <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #333333;">
-            <strong>{inviter_name}</strong> has invited you to join <strong>{tenant_name}</strong> on FlowShare V2 as a <strong>{role_display}</strong>.
+            <strong>{inviter_name}</strong> has invited you to join <strong>{tenant_name}</strong> on FlowShare as a <strong>{role_display}</strong>.
         </p>
 
         <!-- Success/Info Box -->
@@ -487,7 +487,7 @@ def render_invitation_email(
         </table>
 
         <p style="margin: 20px 0; font-size: 16px; line-height: 1.6; color: #333333;">
-            FlowShare V2 is an AI-powered hydrocarbon allocation platform that automates joint venture reconciliation,
+            FlowShare is an AI-powered hydrocarbon allocation platform that automates joint venture reconciliation,
             reducing the process from weeks to minutes while maintaining production-grade accuracy.
         </p>
 

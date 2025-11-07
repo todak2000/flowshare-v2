@@ -32,7 +32,7 @@ export function ScadaIntegrationSection() {
               </span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-              Connect your SCADA systems directly to FlowShare V2 via secure
+              Connect your SCADA systems directly to FlowShare via secure
               REST API. Production data flows automatically - no more
               spreadsheets, no more errors.
             </p>

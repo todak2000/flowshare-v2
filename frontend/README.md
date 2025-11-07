@@ -1,8 +1,8 @@
-# FlowShare V2 - Frontend
+# FlowShare - Frontend
 
 > **Modern Next.js 15 Application for Automated Hydrocarbon Allocation Management**
 
-FlowShare V2 Frontend is a production-grade web application built with Next.js 15, React 19, and TypeScript. It provides an intuitive, responsive interface for Oil & Gas joint ventures to manage production data, trigger reconciliations, and view AI-powered analytics.
+FlowShare Frontend is a production-grade web application built with Next.js 15, React 19, and TypeScript. It provides an intuitive, responsive interface for Oil & Gas joint ventures to manage production data, trigger reconciliations, and view AI-powered analytics.
 
 ---
 
@@ -26,7 +26,7 @@ FlowShare V2 Frontend is a production-grade web application built with Next.js 1
 
 ## Overview
 
-### What is FlowShare V2 Frontend?
+### What is FlowShare Frontend?
 
 The frontend application provides:
 
@@ -1141,7 +1141,7 @@ npm run test:e2e
 
 ## License
 
-Copyright © 2025 FlowShare V2. All rights reserved.
+Copyright © 2025 FlowShare. All rights reserved.
 
 ---
 

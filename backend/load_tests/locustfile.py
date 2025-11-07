@@ -1,5 +1,5 @@
 """
-Load testing suite for FlowShare V2 API using Locust.
+Load testing suite for FlowShare API using Locust.
 
 Usage:
     # Install: pip install locust
@@ -329,7 +329,7 @@ def on_request(request_type, name, response_time, response_length, exception, **
 def on_test_start(environment, **kwargs):
     """Log test start."""
     logger.info("=" * 60)
-    logger.info("FlowShare V2 Load Test Starting")
+    logger.info("FlowShare Load Test Starting")
     logger.info(f"Target: {environment.host}")
     logger.info(f"Users: {environment.runner.target_user_count if hasattr(environment.runner, 'target_user_count') else 'N/A'}")
     logger.info("=" * 60)
@@ -339,7 +339,7 @@ def on_test_start(environment, **kwargs):
 def on_test_stop(environment, **kwargs):
     """Log test completion and summary."""
     logger.info("=" * 60)
-    logger.info("FlowShare V2 Load Test Completed")
+    logger.info("FlowShare Load Test Completed")
 
     stats = environment.stats
     logger.info(f"Total Requests: {stats.total.num_requests}")

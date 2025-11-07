@@ -36,7 +36,7 @@ export function AIAgentsSection() {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            FlowShare V2 uses three specialized AI agents working together to
+            FlowShare uses three specialized AI agents working together to
             validate, calculate, and communicate - eliminating manual work at
             every step
           </p>

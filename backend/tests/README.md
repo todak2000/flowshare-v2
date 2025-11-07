@@ -1,6 +1,6 @@
-# FlowShare V2 Test Suites
+# FlowShare Test Suites
 
-Comprehensive testing infrastructure for FlowShare V2, covering unit tests, integration tests, load tests, and chaos engineering.
+Comprehensive testing infrastructure for FlowShare, covering unit tests, integration tests, load tests, and chaos engineering.
 
 ## Test Coverage
 
@@ -307,7 +307,7 @@ cd load_tests
 k6 run --vus 100 --duration 5m k6_test.js
 
 # Locust load test
-locust -f locustfile.py --host=https://api.flowshare.com --headless --users 100 --run-time 5m
+locust -f locustfile.py --host=https://flowshare-backend-api-226906955613.europe-west1.run.app --headless --users 100 --run-time 5m
 ```
 
 ## CI/CD Integration

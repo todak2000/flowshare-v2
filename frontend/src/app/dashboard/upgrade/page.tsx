@@ -34,7 +34,7 @@ export default function UpgradePlanPage() {
 
     if (planId === "enterprise") {
       window.location.href =
-        "mailto:sales@flowshare.com?subject=Enterprise Plan Upgrade Inquiry"
+        "mailto:todak2000@gmail.com?subject=Enterprise Plan Upgrade Inquiry"
       return
     }
 
@@ -69,7 +69,7 @@ export default function UpgradePlanPage() {
 
   const handleContactSales = () => {
     window.location.href =
-      "mailto:sales@flowshare.com?subject=Enterprise Plan Inquiry"
+      "mailto:todak2000@gmail.com?subject=Enterprise Plan Inquiry"
   }
 
   if (!user) {
@@ -132,8 +132,8 @@ export default function UpgradePlanPage() {
         <div className="mt-16 text-center">
           <p className="text-sm text-muted-foreground">
             Need help choosing? Contact our team at{" "}
-            <a href="mailto:sales@flowshare.com" className="text-primary hover:underline">
-              sales@flowshare.com
+            <a href="mailto:todak2000@gmail.com" className="text-primary hover:underline">
+              todak2000@gmail.com
             </a>
           </p>
         </div>

@@ -1,6 +1,6 @@
 # Load Testing Suite
 
-This directory contains load testing infrastructure for FlowShare V2 API.
+This directory contains load testing infrastructure for FlowShare API.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ brew install k6  # macOS
 sudo apt install k6  # Ubuntu
 
 # Set environment
-export BASE_URL="https://api.flowshare.com"
+export BASE_URL="https://flowshare-backend-api-226906955613.europe-west1.run.app" 
 export TEST_TOKEN="your_firebase_token"
 export TENANT_ID="your_tenant_id"
 
@@ -36,7 +36,7 @@ pip install -r requirements.txt
 locust -f load_tests/locustfile.py --host=http://localhost:8000
 
 # Run headless
-locust -f locustfile.py --host=https://api.flowshare.com \
+locust -f locustfile.py --host=https://flowshare-backend-api-226906955613.europe-west1.run.appflowshare.com \
        --users 100 --spawn-rate 10 --run-time 5m --headless
 ```
 
@@ -171,7 +171,7 @@ Check:
 
 ```bash
 # 1. Set environment
-export BASE_URL="https://staging-api.flowshare.com"
+export BASE_URL="https://flowshare-backend-api-226906955613.europe-west1.run.app"
 export TEST_TOKEN="your_token_here"
 export TENANT_ID="test_tenant_001"
 

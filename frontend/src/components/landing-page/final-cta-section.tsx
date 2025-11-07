@@ -70,7 +70,7 @@ export function FinalCtaSection() {
           transition={{ delay: 0.4 }}
           className="text-sm mt-8"
         >
-          Questions? Email us at sales@flowshare.com
+          Questions? Email us at todak2000@gmail.com
         </motion.p>
       </div>
     </motion.section>

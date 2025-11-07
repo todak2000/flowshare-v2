@@ -18,7 +18,7 @@ export default function SelectPlanPage() {
 
   const handleContactSales = () => {
     window.location.href =
-      "mailto:sales@flowshare.com?subject=Enterprise Plan Inquiry";
+      "mailto:todak2000@gmail.com?subject=Enterprise Plan Inquiry";
   };
 
   return (

@@ -183,7 +183,7 @@ async def handle_invitation_created(
         await send_email(
             to_email=email,
             to_name=partner_name,
-            subject="You're invited to join FlowShare V2!",
+            subject="You're invited to join FlowShare!",
             html_body=html_body,
         )
         logger.info(f"Invitation email sent to {email} for invitation {invitation_id}")

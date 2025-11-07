@@ -1,5 +1,5 @@
 /**
- * k6 Load Test for FlowShare V2 API
+ * k6 Load Test for FlowShare API
  *
  * k6 is a modern, fast load testing tool written in Go.
  *
@@ -267,7 +267,7 @@ function textSummary(data, options) {
 
   let summary = '\n';
   summary += `${indent}========================================\n`;
-  summary += `${indent}FlowShare V2 Load Test Summary\n`;
+  summary += `${indent}FlowShare Load Test Summary\n`;
   summary += `${indent}========================================\n\n`;
 
   summary += `${indent}Test Duration: ${(data.state.testRunDurationMs / 1000).toFixed(2)}s\n`;
@@ -302,7 +302,7 @@ function htmlReport(data) {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>FlowShare V2 Load Test Report</title>
+  <title>FlowShare Load Test Report</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
     h1 { color: #333; }
@@ -314,7 +314,7 @@ function htmlReport(data) {
   </style>
 </head>
 <body>
-  <h1>FlowShare V2 Load Test Report</h1>
+  <h1>FlowShare Load Test Report</h1>
   <h2>Summary</h2>
   <table>
     <tr><th>Metric</th><th>Value</th></tr>

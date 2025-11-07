@@ -11,7 +11,7 @@ import os
 def format_month_period(period_start: datetime, period_end: datetime) -> str:
     """
     Format period as '1st Month - Last_Day Month Year'.
-    Example: '1st August - 31st August 2025'
+    Example: '1st August - 31st August 2025.'
     """
     month_name = period_start.strftime("%B")
     year = period_start.strftime("%Y")
@@ -437,7 +437,7 @@ def generate_excel_report(reconciliation_id: str, reconciliation_data: Dict, res
     ws1 = wb.active
     ws1.title = "Summary"
 
-    ws1['A1'] = 'FlowShare V2 - Reconciliation Report'
+    ws1['A1'] = 'FlowShare - Reconciliation Report'
     ws1['A1'].font = title_font
     ws1['A2'] = f'Period: {period_text}'
     ws1['A2'].font = bold_font

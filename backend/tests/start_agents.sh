@@ -26,7 +26,7 @@ fi
 mkdir -p "$LOGS_DIR"
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}FlowShare V2 - Agent Launcher${NC}"
+echo -e "${BLUE}FlowShare - Agent Launcher${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 

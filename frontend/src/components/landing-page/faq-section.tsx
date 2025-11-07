@@ -31,7 +31,7 @@ export function FaqSection() {
             Frequently Asked Questions
           </h2>
           <p className="text-xl text-muted-foreground">
-            Everything you need to know about FlowShare V2
+            Everything you need to know about FlowShare
           </p>
         </motion.div>
 

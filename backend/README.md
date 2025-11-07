@@ -1,8 +1,8 @@
-# FlowShare V2 - Backend
+# FlowShare - Backend
 
 > **Production-grade API and AI Agent Infrastructure for Automated Hydrocarbon Allocation**
 
-FlowShare V2 Backend is the core engine powering automated petroleum allocation for Oil & Gas joint ventures. Built with FastAPI, it orchestrates event-driven AI agents, implements industry-standard API MPMS 11.1 allocation formulas, and provides a robust REST API for multi-tenant operations.
+FlowShare Backend is the core engine powering automated petroleum allocation for Oil & Gas joint ventures. Built with FastAPI, it orchestrates event-driven AI agents, implements industry-standard API MPMS 11.1 allocation formulas, and provides a robust REST API for multi-tenant operations.
 
 ---
 
@@ -27,7 +27,7 @@ FlowShare V2 Backend is the core engine powering automated petroleum allocation 
 
 ## Overview
 
-### What is FlowShare V2 Backend?
+### What is FlowShare Backend?
 
 The backend provides:
 
@@ -1066,7 +1066,7 @@ We welcome contributions! Please follow these guidelines:
 
 ## License
 
-Copyright © 2025 FlowShare V2. All rights reserved.
+Copyright © 2025 FlowShare. All rights reserved.
 
 ---
 

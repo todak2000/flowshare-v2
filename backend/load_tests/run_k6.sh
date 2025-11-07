@@ -32,7 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTS_DIR="$SCRIPT_DIR/../tests"
 
 echo -e "${BLUE}===================================================${NC}"
-echo -e "${BLUE}  FlowShare V2 - K6 Load Test Runner${NC}"
+echo -e "${BLUE}  FlowShare - K6 Load Test Runner${NC}"
 echo -e "${BLUE}===================================================${NC}"
 echo ""
 

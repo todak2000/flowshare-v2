@@ -1,5 +1,5 @@
 """
-Chaos Engineering Framework for FlowShare V2.
+Chaos Engineering Framework for FlowShare.
 
 Provides tools to inject failures and test system resilience:
 - Network disruptions (latency, packet loss, partitions)

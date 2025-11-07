@@ -1,5 +1,5 @@
 #!/bin/bash
-# FlowShare V2 Test Setup Script
+# FlowShare Test Setup Script
 # Automates environment setup for running tests
 
 set -e  # Exit on error
@@ -43,7 +43,7 @@ command_exists() {
 
 # Main setup
 main() {
-    header "FlowShare V2 Test Setup"
+    header "FlowShare Test Setup"
 
     # Change to backend directory
     cd "$(dirname "$0")/../.."

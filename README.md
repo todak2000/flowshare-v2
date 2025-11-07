@@ -1,4 +1,4 @@
-# FlowShare V2
+# FlowShare
 
 > **Production-Grade Automated Hydrocarbon Allocation Platform for Oil & Gas Joint Ventures**
 
@@ -9,13 +9,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-FlowShare V2 is a full-stack SaaS application that automates petroleum allocation calculations for joint venture operations, reducing reconciliation time from weeks to minutes with 99.9% accuracy using industry-standard API MPMS 11.1 formulas.
+FlowShare is a full-stack SaaS application that automates petroleum allocation calculations for joint venture operations, reducing reconciliation time from weeks to minutes with 99.9% accuracy using industry-standard API MPMS 11.1 formulas.
 
 ---
 
-## 🎯 What is FlowShare V2?
+## 🎯 What is FlowShare?
 
-FlowShare V2 streamlines the complex process of allocating crude oil production among multiple partners in a joint venture. It combines:
+FlowShare streamlines the complex process of allocating crude oil production among multiple partners in a joint venture. It combines:
 
 - **AI-Powered Validation** - Gemini API detects anomalies in production data
 - **Automated Calculations** - API MPMS 11.1 petroleum allocation standards
@@ -42,14 +42,14 @@ FlowShare V2 streamlines the complex process of allocating crude oil production 
 ## 📺 Videos
 
 ### Explainer Video (4 minutes)
-Learn how FlowShare V2 solves petroleum allocation challenges with AI-powered automation.
+Learn how FlowShare solves petroleum allocation challenges with AI-powered automation.
 
-**Watch:** [FlowShare V2 Explainer](https://youtu.be/bhytH-z8k2Y)
+**Watch:** [FlowShare Explainer](https://youtu.be/bhytH-z8k2Y)
 
 ### Demo Video (6 minutes)
 Complete walkthrough of the application - from submitting production data to running reconciliations.
 
-**Watch:** [FlowShare V2 Demo](https://youtu.be/yjV5SEOnyAU)
+**Watch:** [FlowShare Demo](https://youtu.be/yjV5SEOnyAU)
 
 ### Technical Deep-Dive
 **Blog Post:** [Building FlowShare: How I Built a Multi-Agent System on Google Cloud Run](https://medium.com/@todak2000/building-flowshare-how-i-built-a-multi-agent-system-on-google-cloud-run-a6dd577989e2)
@@ -58,7 +58,7 @@ Complete walkthrough of the application - from submitting production data to run
 
 ## 🏗️ Architecture Overview
 
-FlowShare V2 is built on a **serverless, event-driven, multi-agent architecture** deployed entirely on Google Cloud Platform.
+FlowShare is built on a **serverless, event-driven, multi-agent architecture** deployed entirely on Google Cloud Platform.
 
 <p align="center">
   <img src="archi.svg" alt="Architecture Diagram" width="100%">
@@ -302,7 +302,7 @@ yarn test --run
 
 ## ☁️ Google Cloud Platform Services
 
-FlowShare V2 leverages **7 GCP services** strategically integrated for a production-grade, serverless architecture:
+FlowShare leverages **7 GCP services** strategically integrated for a production-grade, serverless architecture:
 
 ### Core Services (Active)
 
@@ -606,7 +606,7 @@ GitHub Actions will automatically build Docker images and deploy to Cloud Run.
 3. Get instant AI-powered answers about your production data
 
 #### Step 7: Watch the Demo Video
-For a complete walkthrough of all features: [FlowShare V2 Demo Video](https://youtu.be/yjV5SEOnyAU) (6 min)
+For a complete walkthrough of all features: [FlowShare Demo Video](https://youtu.be/yjV5SEOnyAU) (6 min)
 
 ---
 
@@ -668,7 +668,7 @@ For a complete walkthrough of all features: [FlowShare V2 Demo Video](https://yo
 3. Copy your JWT token
 
 **Option B: Contact for API Access**
-- Email: support@flowshare.com
+- Email: todak2000@gmail.com
 - We'll provide test credentials
 
 #### Step 3: Test Production Entry Endpoint
@@ -742,7 +742,7 @@ By completing this guide, you'll understand:
 **Support**:
 - **Documentation**: [Backend README](./backend/README.md) | [Frontend README](./frontend/README.md)
 - **Issues**: [GitHub Issues](https://github.com/todak2000/flowshare-v2/issues)
-- **Email**: support@flowshare.com
+- **Email**: todak2000@gmail.com
 
 ---
 
@@ -769,7 +769,7 @@ We welcome contributions! Please follow these steps:
 
 ## 📝 License
 
-Copyright © 2025 FlowShare V2. All rights reserved.
+Copyright © 2025 FlowShare. All rights reserved.
 
 ---
 
@@ -779,7 +779,7 @@ For questions, issues, or support:
 
 - **Documentation**: [Backend README](./backend/README.md) | [Frontend README](./frontend/README.md)
 - **Issues**: [GitHub Issues](https://github.com/todak2000/flowshare-v2/issues)
-- **Email**: support@flowshare.com
+- **Email**: todak2000@gmail.com
 
 ---
 

@@ -1,5 +1,5 @@
 """
-Chaos Engineering Test Scenarios for FlowShare V2.
+Chaos Engineering Test Scenarios for FlowShare.
 
 Each test validates system resilience under specific failure conditions.
 Tests are organized by failure domain:

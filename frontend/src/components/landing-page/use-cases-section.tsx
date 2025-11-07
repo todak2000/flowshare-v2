@@ -27,7 +27,7 @@ export function UseCasesSection() {
             Built for Every Role in Your JV
           </h2>
           <p className="text-xl text-muted-foreground">
-            From operators to partners, FlowShare V2 serves every stakeholder
+            From operators to partners, FlowShare serves every stakeholder
           </p>
         </motion.div>
 
